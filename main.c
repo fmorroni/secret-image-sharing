@@ -1,8 +1,10 @@
+#include "SIS/sis.h"
 #include "bmp/bmp.h"
 #include <getopt.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/types.h>
 
 int main(int argc, char* argv[]) {
   const char* input_file = NULL;
@@ -52,19 +54,19 @@ int main(int argc, char* argv[]) {
   }
   bmpPrintHeader(bmp);
 
-  unsigned char* img = bmpImage(bmp);
-  int width = bmpWidth(bmp);
-  int height = bmpHeight(bmp);
-  for (int row = 0; row < height / 2; ++row) {
-    for (int col = 0; col < width / 2; ++col) {
-      img[row * width + col] ^= 0xFF;
-    }
-  }
-  for (int row = height / 2; row < height; ++row) {
-    for (int col = width / 2; col < width; ++col) {
-      img[row * width + col] ^= 0xFF;
-    }
-  }
+  // unsigned char* img = bmpImage(bmp);
+  // int width = bmpWidth(bmp);
+  // int height = bmpHeight(bmp);
+  // for (int row = 0; row < height / 2; ++row) {
+  //   for (int col = 0; col < width / 2; ++col) {
+  //     img[row * width + col] ^= 0xFF;
+  //   }
+  // }
+  // for (int row = height / 2; row < height; ++row) {
+  //   for (int col = width / 2; col < width; ++col) {
+  //     img[row * width + col] ^= 0xFF;
+  //   }
+  // }
 
   // int32_t img_size = bmpImageSize(bmp);
   // char factor = 0x1E;
@@ -73,7 +75,7 @@ int main(int argc, char* argv[]) {
   //   else img[i] = 255;
   // }
 
-  bmpWriteFile(output_file, bmp);
+  sisShadows(bmp, 5, 10);
 
   bmpFree(bmp);
 
