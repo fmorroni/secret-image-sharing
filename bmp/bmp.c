@@ -75,7 +75,7 @@ BMP bmpNew(
   bmp->info_header_size = 40;
   bmp->width = width;
   bmp->height = height;
-  bmp->n_planes = 0;
+  bmp->n_planes = 1;
   bmp->bpp = bpp;
   bmp->compression_type = 0;
   bmp->image_size = image_size;
