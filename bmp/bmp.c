@@ -1,9 +1,18 @@
 #include "bmp.h"
+#include <errno.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
+
+#define BMP_SIMPLE_CLEANUP(msg, bmp)                                                               \
+  do {                                                                                             \
+    perror(msg);                                                                                   \
+    bmpFree(bmp);                                                                                  \
+    return NULL;                                                                                   \
+  } while (0)
 
 #define BMP_PARSE_CLEANUP(msg, bmp, file)                                                          \
   do {                                                                                             \
@@ -19,13 +28,6 @@
     fclose(file);                                                                                  \
     return EXIT_FAILURE;                                                                           \
   } while (0)
-
-typedef struct Color {
-  unsigned char b; // Blue
-  unsigned char g; // Green
-  unsigned char r; // Red
-  unsigned char f; // Filler
-} Color;
 
 typedef struct BMP_CDT {
   char id[2];
@@ -46,6 +48,52 @@ typedef struct BMP_CDT {
   Color* colors;
   u_char* image;
 } BMP_CDT;
+
+BMP bmpNew(
+  int32_t width, int32_t height, int16_t bpp, u_char reserved[4], int32_t n_colors,
+  Color colors[n_colors]
+) {
+  if (bpp % 8 != 0) {
+    errno = EINVAL;
+    return NULL;
+  }
+
+  BMP bmp = malloc(sizeof(BMP_CDT));
+  if (bmp == NULL) {
+    perror("malloc");
+    return NULL;
+  }
+
+  int32_t image_size = width * height * bpp / 8;
+  int32_t header_size = 54 + sizeof(Color) * n_colors;
+
+  bmp->id[0] = 'B';
+  bmp->id[1] = 'M';
+  bmp->filesize = width * height * bpp / 8 + header_size;
+  for (int i = 0; i < 4; ++i) bmp->reserved[i] = reserved[i];
+  bmp->offset = header_size;
+  bmp->info_header_size = 40;
+  bmp->width = width;
+  bmp->height = height;
+  bmp->n_planes = 0;
+  bmp->bpp = bpp;
+  bmp->compression_type = 0;
+  bmp->image_size = image_size;
+  bmp->horizontal_resolution = 0;
+  bmp->vertical_resolution = 0;
+  bmp->n_colors = n_colors;
+  bmp->n_important_colors = 0;
+  if (n_colors > 0 && colors != NULL) {
+    size_t color_bytes = sizeof(Color) * bmp->n_colors;
+    bmp->colors = malloc(color_bytes);
+    if (bmp->colors == NULL) BMP_SIMPLE_CLEANUP("malloc", bmp);
+    memcpy(bmp->colors, colors, color_bytes);
+  }
+  bmp->image = malloc(image_size);
+  if (bmp->image == NULL) BMP_SIMPLE_CLEANUP("malloc", bmp);
+
+  return bmp;
+}
 
 BMP bmpParse(const char* filename) {
   // "rb" is for binary files.
@@ -134,6 +182,14 @@ int32_t bmpHeight(BMP bmp) {
 
 int32_t bmpBpp(BMP bmp) {
   return bmp->bpp;
+}
+
+int32_t bmpNColors(BMP bmp) {
+  return bmp->n_colors;
+}
+
+Color* bmpColors(BMP bmp) {
+  return bmp->colors;
 }
 
 int bmpWriteFile(const char* filename, BMP bmp) {
