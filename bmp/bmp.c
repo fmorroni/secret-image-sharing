@@ -199,8 +199,6 @@ int bmpWriteFile(const char* filename, BMP bmp) {
     return EXIT_FAILURE;
   }
 
-  bmp->n_colors = 0;
-  bmp->offset = 0x36;
   size_t written = fwrite(bmp, 2, 1, file);
   if (written != 1) BMP_WRITE_CLEANUP("fwrite", file);
 
