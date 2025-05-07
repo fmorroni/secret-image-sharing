@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/types.h>
 
 #define BMP_PARSE_CLEANUP(msg, bmp, file)                                                          \
   do {                                                                                             \
@@ -29,7 +30,7 @@ typedef struct Color {
 typedef struct BMP_CDT {
   char id[2];
   int32_t filesize;             // In bytes.
-  unsigned char reserved[4];    //
+  u_char reserved[4];           //
   int32_t offset;               //
   int32_t infoHeaderSize;       // Info header starts starts at this address.
   int32_t width;                // In pixels.
@@ -43,7 +44,7 @@ typedef struct BMP_CDT {
   int32_t nColors;              // Number of colors.
   int32_t nImportantColors;     // Number of important colors. (???)
   Color* colors;
-  unsigned char* image;
+  u_char* image;
 } BMP_CDT;
 
 BMP bmpParse(const char* filename) {
@@ -115,7 +116,7 @@ void bmpFree(BMP header) {
   }
 }
 
-unsigned char* bmpImage(BMP bmp) {
+u_char* bmpImage(BMP bmp) {
   return bmp->image;
 }
 

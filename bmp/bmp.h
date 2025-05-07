@@ -3,12 +3,13 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <sys/types.h>
 
 typedef struct BMP_CDT* BMP;
 
 BMP bmpParse(const char* filename);
 void bmpFree(BMP bmp);
-unsigned char* bmpImage(BMP bmp);
+u_char* bmpImage(BMP bmp);
 int32_t bmpImageSize(BMP bmp);
 int32_t bmpWidth(BMP bmp);
 int32_t bmpHeight(BMP bmp);
