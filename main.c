@@ -66,9 +66,9 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  // int32_t imgSize = bmpImageSize(bmp);
+  // int32_t img_size = bmpImageSize(bmp);
   // char factor = 0x1E;
-  // for (int i = 0; i < imgSize; i += 1) {
+  // for (int i = 0; i < img_size; i += 1) {
   //   if ((int)img[i] + factor <= 255) img[i] += factor;
   //   else img[i] = 255;
   // }

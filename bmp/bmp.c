@@ -29,20 +29,20 @@ typedef struct Color {
 
 typedef struct BMP_CDT {
   char id[2];
-  int32_t filesize;             // In bytes.
-  u_char reserved[4];           //
-  int32_t offset;               //
-  int32_t infoHeaderSize;       // Info header starts starts at this address.
-  int32_t width;                // In pixels.
-  int32_t height;               // In pixels.
-  int16_t nPlanes;              // No clue what this is...
-  int16_t bpp;                  // Bits Per Pixel.
-  int32_t compressionType;      // 0: none - 1: RLE 8-bit/pixel - 2: RLE 4-bit/pixel - ...
-  int32_t imageSize;            // In bytes.
-  int32_t horizontalResolution; //
-  int32_t verticalResolution;   //
-  int32_t nColors;              // Number of colors.
-  int32_t nImportantColors;     // Number of important colors. (???)
+  int32_t filesize;              // In bytes.
+  u_char reserved[4];            //
+  int32_t offset;                //
+  int32_t info_header_size;      // Info header starts starts at this address.
+  int32_t width;                 // In pixels.
+  int32_t height;                // In pixels.
+  int16_t n_planes;              // No clue what this is...
+  int16_t bpp;                   // Bits Per Pixel.
+  int32_t compression_type;      // 0: none - 1: RLE 8-bit/pixel - 2: RLE 4-bit/pixel - ...
+  int32_t image_size;            // In bytes.
+  int32_t horizontal_resolution; //
+  int32_t vertical_resolution;   //
+  int32_t n_colors;              // Number of colors.
+  int32_t n_important_colors;    // Number of important colors. (???)
   Color* colors;
   u_char* image;
 } BMP_CDT;
@@ -66,35 +66,35 @@ BMP bmpParse(const char* filename) {
   size_t read = fread(bmp, 2, 1, file);
   if (read != 1) BMP_PARSE_CLEANUP("fread", bmp, file);
 
-  // This reads the default header upto infoHeaderSize.
+  // This reads the default header upto info_header_size.
   read = fread(&bmp->filesize, 16, 1, file);
   if (read != 1) BMP_PARSE_CLEANUP("fread", bmp, file);
 
-  // The size specified in infoHeaderSize includes itself so we subtruct its size.
-  read = fread(&bmp->width, bmp->infoHeaderSize - 4, 1, file);
+  // The size specified in info_header_size includes itself so we subtruct its size.
+  read = fread(&bmp->width, bmp->info_header_size - 4, 1, file);
   if (read != 1) BMP_PARSE_CLEANUP("fread", bmp, file);
 
-  if (bmp->nImportantColors != 0) {
+  if (bmp->n_important_colors != 0) {
     fprintf(stderr, "Number of important colors != 0. Idk what to do, look it up...");
   }
 
   // Available colors are sometimes (not sure why not always...) defined in the header,
   // in a 4 byte format for B-G-R-Filler.
-  if (bmp->nColors > 0) {
-    size_t colorBytes = sizeof(Color) * bmp->nColors;
-    bmp->colors = malloc(colorBytes);
+  if (bmp->n_colors > 0) {
+    size_t color_bytes = sizeof(Color) * bmp->n_colors;
+    bmp->colors = malloc(color_bytes);
     if (bmp->colors == NULL) BMP_PARSE_CLEANUP("malloc", bmp, file);
 
-    read = fread(bmp->colors, colorBytes, 1, file);
+    read = fread(bmp->colors, color_bytes, 1, file);
     if (read != 1) BMP_PARSE_CLEANUP("fread", bmp, file);
   }
 
-  bmp->image = malloc(bmp->imageSize);
+  bmp->image = malloc(bmp->image_size);
   if (bmp->image == NULL) BMP_PARSE_CLEANUP("malloc", bmp, file);
 
   if (fseek(file, bmp->offset, SEEK_SET) != 0) BMP_PARSE_CLEANUP("fseek", bmp, file);
-  read = fread(bmp->image, 1, bmp->imageSize, file);
-  if (read != bmp->imageSize) BMP_PARSE_CLEANUP("fread", bmp, file);
+  read = fread(bmp->image, 1, bmp->image_size, file);
+  if (read != bmp->image_size) BMP_PARSE_CLEANUP("fread", bmp, file);
 
   if (fclose(file) != 0) {
     perror("fclose");
@@ -121,7 +121,7 @@ u_char* bmpImage(BMP bmp) {
 }
 
 int32_t bmpImageSize(BMP bmp) {
-  return bmp->imageSize;
+  return bmp->image_size;
 }
 
 int32_t bmpWidth(BMP bmp) {
@@ -143,22 +143,24 @@ int bmpWriteFile(const char* filename, BMP bmp) {
     return EXIT_FAILURE;
   }
 
+  bmp->n_colors = 0;
+  bmp->offset = 0x36;
   size_t written = fwrite(bmp, 2, 1, file);
   if (written != 1) BMP_WRITE_CLEANUP("fwrite", file);
 
   written = fwrite(&bmp->filesize, 16, 1, file);
   if (written != 1) BMP_WRITE_CLEANUP("fwrite", file);
 
-  written = fwrite(&bmp->width, bmp->infoHeaderSize - 4, 1, file);
+  written = fwrite(&bmp->width, bmp->info_header_size - 4, 1, file);
   if (written != 1) BMP_WRITE_CLEANUP("fwrite", file);
 
-  if (bmp->nColors > 0) {
-    written = fwrite(bmp->colors, sizeof(Color) * bmp->nColors, 1, file);
+  if (bmp->n_colors > 0) {
+    written = fwrite(bmp->colors, sizeof(Color) * bmp->n_colors, 1, file);
     if (written != 1) BMP_WRITE_CLEANUP("fwrite", file);
   }
 
   if (fseek(file, bmp->offset, SEEK_SET) != 0) BMP_WRITE_CLEANUP("fseek", file);
-  written = fwrite(bmp->image, bmp->imageSize, 1, file);
+  written = fwrite(bmp->image, bmp->image_size, 1, file);
   if (written != 1) BMP_WRITE_CLEANUP("fwrite", file);
 
   return 0;
@@ -177,22 +179,22 @@ void bmpPrintHeader(BMP bmp) {
     bmp->reserved[2], bmp->reserved[3]
   );
   printf("Pixel Data Offset:  %d bytes\n", bmp->offset);
-  printf("Info Header Size:   %d bytes\n", bmp->infoHeaderSize);
+  printf("Info Header Size:   %d bytes\n", bmp->info_header_size);
   printf("Width:              %d px\n", bmp->width);
   printf("Height:             %d px\n", bmp->height);
-  printf("Planes:             %d\n", bmp->nPlanes);
+  printf("Planes:             %d\n", bmp->n_planes);
   printf("Bits Per Pixel:     %d\n", bmp->bpp);
-  printf("Compression Type:   %d\n", bmp->compressionType);
-  printf("Image Size:         %d bytes\n", bmp->imageSize);
-  printf("X Resolution:       %d px/meter\n", bmp->horizontalResolution);
-  printf("Y Resolution:       %d px/meter\n", bmp->verticalResolution);
-  printf("Total Colors:       %d\n", bmp->nColors);
-  printf("Important Colors:   %d\n", bmp->nImportantColors);
-  if (bmp->nColors > 0) {
+  printf("Compression Type:   %d\n", bmp->compression_type);
+  printf("Image Size:         %d bytes\n", bmp->image_size);
+  printf("X Resolution:       %d px/meter\n", bmp->horizontal_resolution);
+  printf("Y Resolution:       %d px/meter\n", bmp->vertical_resolution);
+  printf("Total Colors:       %d\n", bmp->n_colors);
+  printf("Important Colors:   %d\n", bmp->n_important_colors);
+  if (bmp->n_colors > 0) {
     printf("Colors: [ ");
-    for (int i = 0; i < bmp->nColors; ++i) {
+    for (int i = 0; i < bmp->n_colors; ++i) {
       printColor(bmp->colors[i]);
-      if (i < bmp->nColors - 1) printf(", ");
+      if (i < bmp->n_colors - 1) printf(", ");
     }
     printf("]\n");
   }
