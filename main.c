@@ -45,25 +45,16 @@ int main(int argc, char* argv[]) {
   printf("Input file: %s\n", input_file);
   printf("Output file: %s\n\n", output_file);
 
-  // "rb" is for binary files.
-  FILE* input = fopen(input_file, "rb");
-  if (input == NULL) {
-    perror("fopen");
-    exit(EXIT_FAILURE);
-  }
-
-  BMP_HEADER header = bmpParseHeader(input);
-  if (header == NULL) {
+  BMP bmp = bmpParse(input_file);
+  if (bmp == NULL) {
     fprintf(stderr, "Error parsing header");
     exit(EXIT_FAILURE);
   }
-  bmpPrintHeader(header);
-  int32_t imgSize = bmpImageSize(header);
-  unsigned char img[imgSize];
-  bmpParseBody(input, header, img);
+  bmpPrintHeader(bmp);
 
-  int width = bmpWidth(header);
-  int height = bmpHeight(header);
+  unsigned char* img = bmpImage(bmp);
+  int width = bmpWidth(bmp);
+  int height = bmpHeight(bmp);
   for (int row = 0; row < height / 2; ++row) {
     for (int col = 0; col < width / 2; ++col) {
       img[row * width + col] ^= 0xFF;
@@ -75,16 +66,16 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  // for (int i = 0; i < imgSize; i += 3) {
-  //   img[i] += 0xAA;
+  // int32_t imgSize = bmpImageSize(bmp);
+  // char factor = 0x1E;
+  // for (int i = 0; i < imgSize; i += 1) {
+  //   if ((int)img[i] + factor <= 255) img[i] += factor;
+  //   else img[i] = 255;
   // }
 
-  FILE* output = fopen(output_file, "w");
-  bmpWriteFile(output, header, img);
+  bmpWriteFile(output_file, bmp);
 
-  fclose(input);
-  fclose(output);
-  bmpFreeHeader(header);
+  bmpFree(bmp);
 
   return 0;
 }
