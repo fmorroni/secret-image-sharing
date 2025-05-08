@@ -68,7 +68,7 @@ BMP bmpNew(
 
   bmp->id[0] = 'B';
   bmp->id[1] = 'M';
-  bmp->filesize = width * height * bpp / 8 + header_size;
+  bmp->filesize = image_size + header_size;
   if (reserved != NULL) memcpy(bmp->reserved, reserved, 4);
   else memset(bmp->reserved, 0, 4);
   bmp->offset = header_size;
