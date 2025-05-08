@@ -88,6 +88,9 @@ BMP bmpNew(
     bmp->colors = malloc(color_bytes);
     if (bmp->colors == NULL) BMP_SIMPLE_CLEANUP("malloc", bmp);
     memcpy(bmp->colors, colors, color_bytes);
+  } else {
+    bmp->n_colors = 0;
+    bmp->colors = NULL;
   }
   bmp->image = malloc(image_size);
   if (bmp->image == NULL) BMP_SIMPLE_CLEANUP("malloc", bmp);
@@ -135,6 +138,7 @@ BMP bmpParse(const char* filename) {
 
     read = fread(bmp->colors, color_bytes, 1, file);
     if (read != 1) BMP_PARSE_CLEANUP("fread", bmp, file);
+  } else bmp->colors = NULL;
   }
 
   bmp->image = malloc(bmp->image_size);
