@@ -23,8 +23,8 @@ void sisShadows(BMP bmp, u_char r, u_char n) {
   BMP shadows[n];
   for (u_char i = 0; i < n; ++i) {
     shadows[i] = bmpNew(
-      shadow_cols, shadow_rows, bmpBpp(bmp), (u_char[]){seed_low, seed_high, i + 1, 0}, bmpNColors(bmp),
-      bmpColors(bmp)
+      shadow_cols, shadow_rows, bmpBpp(bmp), (u_char[]){seed_low, seed_high, i + 1, 0},
+      bmpNColors(bmp), bmpColors(bmp), 0, NULL
     );
   }
 

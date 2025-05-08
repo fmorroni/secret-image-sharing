@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
@@ -45,12 +46,14 @@ typedef struct BMP_CDT {
   uint32_t n_colors;              // Number of colors.
   uint32_t n_important_colors;    // Number of important colors. (???)
   Color* colors;
+  uint32_t extra_data_size;
+  u_char* extra_data;
   u_char* image;
 } BMP_CDT;
 
 BMP bmpNew(
   uint32_t width, uint32_t height, uint16_t bpp, u_char reserved[4], uint32_t n_colors,
-  Color colors[n_colors]
+  Color colors[n_colors], uint32_t extra_data_size, u_char extra_data[extra_data_size]
 ) {
   if (bpp % 8 != 0) {
     errno = EINVAL;
@@ -64,7 +67,8 @@ BMP bmpNew(
   }
 
   uint32_t image_size = width * height * bpp / 8;
-  uint32_t header_size = 54 + sizeof(Color) * n_colors;
+  uint32_t extra_data_bytes = extra_data_size == 0 ? 0 : 4 + extra_data_size;
+  uint32_t header_size = 54 + sizeof(Color) * n_colors + extra_data_bytes;
 
   bmp->id[0] = 'B';
   bmp->id[1] = 'M';
@@ -91,6 +95,15 @@ BMP bmpNew(
   } else {
     bmp->n_colors = 0;
     bmp->colors = NULL;
+  }
+  if (extra_data_size > 0 && extra_data != NULL) {
+    bmp->extra_data_size = extra_data_size;
+    bmp->extra_data = malloc(extra_data_size);
+    if (bmp->extra_data == NULL) BMP_SIMPLE_CLEANUP("malloc", bmp);
+    memcpy(bmp->extra_data, extra_data, extra_data_size);
+  } else {
+    bmp->extra_data_size = 0;
+    bmp->extra_data = NULL;
   }
   bmp->image = malloc(image_size);
   if (bmp->image == NULL) BMP_SIMPLE_CLEANUP("malloc", bmp);
@@ -139,6 +152,19 @@ BMP bmpParse(const char* filename) {
     read = fread(bmp->colors, color_bytes, 1, file);
     if (read != 1) BMP_PARSE_CLEANUP("fread", bmp, file);
   } else bmp->colors = NULL;
+
+  if (ftell(file) != bmp->offset) {
+    read = fread(&bmp->extra_data_size, 4, 1, file);
+    if (read != 1) BMP_PARSE_CLEANUP("fread", bmp, file);
+    if (bmp->extra_data_size > 0) {
+      bmp->extra_data = malloc(bmp->extra_data_size);
+      if (bmp->extra_data == NULL) BMP_PARSE_CLEANUP("malloc", bmp, file);
+      read = fread(bmp->extra_data, bmp->extra_data_size, 1, file);
+      if (read != 1) BMP_PARSE_CLEANUP("fread", bmp, file);
+    }
+  } else {
+    bmp->extra_data_size = 0;
+    bmp->extra_data = NULL;
   }
 
   bmp->image = malloc(bmp->image_size);
@@ -163,6 +189,9 @@ void bmpFree(BMP header) {
     }
     if (header->image != NULL) {
       free(header->image);
+    }
+    if (header->extra_data != NULL) {
+      free(header->extra_data);
     }
     free(header);
   }
@@ -196,6 +225,14 @@ Color* bmpColors(BMP bmp) {
   return bmp->colors;
 }
 
+uint32_t bmpExtraSize(BMP bmp) {
+  return bmp->extra_data_size;
+}
+
+u_char* bmpExtraData(BMP bmp) {
+  return bmp->extra_data;
+}
+
 int bmpWriteFile(const char* filename, BMP bmp) {
   FILE* file = fopen(filename, "w");
   if (file == NULL) {
@@ -214,6 +251,13 @@ int bmpWriteFile(const char* filename, BMP bmp) {
 
   if (bmp->n_colors > 0) {
     written = fwrite(bmp->colors, sizeof(Color) * bmp->n_colors, 1, file);
+    if (written != 1) BMP_WRITE_CLEANUP("fwrite", file);
+  }
+
+  if (bmp->extra_data_size > 0) {
+    written = fwrite(&bmp->extra_data_size, 4, 1, file);
+    if (written != 1) BMP_WRITE_CLEANUP("fwrite", file);
+    written = fwrite(bmp->extra_data, bmp->extra_data_size, 1, file);
     if (written != 1) BMP_WRITE_CLEANUP("fwrite", file);
   }
 
@@ -249,10 +293,18 @@ void bmpPrintHeader(BMP bmp) {
   printf("Total Colors:       %d\n", bmp->n_colors);
   printf("Important Colors:   %d\n", bmp->n_important_colors);
   if (bmp->n_colors > 0) {
-    printf("Colors: [ ");
+    printf("Colors:             [ ");
     for (int i = 0; i < bmp->n_colors; ++i) {
       printColor(bmp->colors[i]);
       if (i < bmp->n_colors - 1) printf(", ");
+    }
+    printf(" ]\n");
+  }
+  if (bmp->extra_data_size > 0) {
+    printf("Extra data size:    %d\n", bmp->extra_data_size);
+    printf("Extra data:         [ ");
+    for (uint32_t i = 0; i < bmp->extra_data_size; ++i) {
+      printf("%02x ", bmp->extra_data[i]);
     }
     printf("]\n");
   }

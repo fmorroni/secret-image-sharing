@@ -16,7 +16,7 @@ typedef struct Color {
 
 BMP bmpNew(
   uint32_t width, uint32_t height, uint16_t bpp, u_char reserved[4], uint32_t n_colors,
-  Color colors[n_colors]
+  Color colors[n_colors], uint32_t extra_data_size, u_char extra_data[extra_data_size]
 );
 BMP bmpParse(const char* filename);
 void bmpFree(BMP bmp);
@@ -27,6 +27,8 @@ uint32_t bmpHeight(BMP bmp);
 uint32_t bmpBpp(BMP bmp);
 uint32_t bmpNColors(BMP bmp);
 Color* bmpColors(BMP bmp);
+uint32_t bmpExtraSize(BMP bmp);
+u_char* bmpExtraData(BMP bmp);
 int bmpWriteFile(const char* filename, BMP bmp);
 void bmpPrintHeader(BMP bmp);
 
