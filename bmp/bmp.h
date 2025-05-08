@@ -15,17 +15,17 @@ typedef struct Color {
 } Color;
 
 BMP bmpNew(
-  int32_t width, int32_t height, int16_t bpp, u_char reserved[4], int32_t n_colors,
+  uint32_t width, uint32_t height, uint16_t bpp, u_char reserved[4], uint32_t n_colors,
   Color colors[n_colors]
 );
 BMP bmpParse(const char* filename);
 void bmpFree(BMP bmp);
 u_char* bmpImage(BMP bmp);
-int32_t bmpImageSize(BMP bmp);
-int32_t bmpWidth(BMP bmp);
-int32_t bmpHeight(BMP bmp);
-int32_t bmpBpp(BMP bmp);
-int32_t bmpNColors(BMP bmp);
+uint32_t bmpImageSize(BMP bmp);
+uint32_t bmpWidth(BMP bmp);
+uint32_t bmpHeight(BMP bmp);
+uint32_t bmpBpp(BMP bmp);
+uint32_t bmpNColors(BMP bmp);
 Color* bmpColors(BMP bmp);
 int bmpWriteFile(const char* filename, BMP bmp);
 void bmpPrintHeader(BMP bmp);

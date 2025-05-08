@@ -31,7 +31,7 @@ void closestDivisors(uint32_t N, uint32_t* r_out, uint32_t* c_out) {
   *c_out = best_c;
 }
 
-int32_t polynomialModuloEval(u_char order, u_char coefficients[], int32_t mod, u_char x) {
+int32_t polynomialModuloEval(u_char order, u_char coefficients[], uint32_t mod, u_char x) {
   int32_t v = 0;
 
   u_char x_pow = 1;

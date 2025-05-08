@@ -30,26 +30,26 @@
 
 typedef struct BMP_CDT {
   char id[2];
-  int32_t filesize;              // In bytes.
-  u_char reserved[4];            //
-  int32_t offset;                //
-  int32_t info_header_size;      // Info header starts starts at this address.
-  int32_t width;                 // In pixels.
-  int32_t height;                // In pixels.
-  int16_t n_planes;              // No clue what this is...
-  int16_t bpp;                   // Bits Per Pixel.
-  int32_t compression_type;      // 0: none - 1: RLE 8-bit/pixel - 2: RLE 4-bit/pixel - ...
-  int32_t image_size;            // In bytes.
-  int32_t horizontal_resolution; //
-  int32_t vertical_resolution;   //
-  int32_t n_colors;              // Number of colors.
-  int32_t n_important_colors;    // Number of important colors. (???)
+  uint32_t filesize;              // In bytes.
+  u_char reserved[4];             //
+  uint32_t offset;                //
+  uint32_t info_header_size;      // Info header starts starts at this address.
+  uint32_t width;                 // In pixels.
+  uint32_t height;                // In pixels.
+  uint16_t n_planes;              // No clue what this is...
+  uint16_t bpp;                   // Bits Per Pixel.
+  uint32_t compression_type;      // 0: none - 1: RLE 8-bit/pixel - 2: RLE 4-bit/pixel - ...
+  uint32_t image_size;            // In bytes.
+  uint32_t horizontal_resolution; //
+  uint32_t vertical_resolution;   //
+  uint32_t n_colors;              // Number of colors.
+  uint32_t n_important_colors;    // Number of important colors. (???)
   Color* colors;
   u_char* image;
 } BMP_CDT;
 
 BMP bmpNew(
-  int32_t width, int32_t height, int16_t bpp, u_char reserved[4], int32_t n_colors,
+  uint32_t width, uint32_t height, uint16_t bpp, u_char reserved[4], uint32_t n_colors,
   Color colors[n_colors]
 ) {
   if (bpp % 8 != 0) {
@@ -63,8 +63,8 @@ BMP bmpNew(
     return NULL;
   }
 
-  int32_t image_size = width * height * bpp / 8;
-  int32_t header_size = 54 + sizeof(Color) * n_colors;
+  uint32_t image_size = width * height * bpp / 8;
+  uint32_t header_size = 54 + sizeof(Color) * n_colors;
 
   bmp->id[0] = 'B';
   bmp->id[1] = 'M';
@@ -168,23 +168,23 @@ u_char* bmpImage(BMP bmp) {
   return bmp->image;
 }
 
-int32_t bmpImageSize(BMP bmp) {
+uint32_t bmpImageSize(BMP bmp) {
   return bmp->image_size;
 }
 
-int32_t bmpWidth(BMP bmp) {
+uint32_t bmpWidth(BMP bmp) {
   return bmp->width;
 }
 
-int32_t bmpHeight(BMP bmp) {
+uint32_t bmpHeight(BMP bmp) {
   return bmp->height;
 }
 
-int32_t bmpBpp(BMP bmp) {
+uint32_t bmpBpp(BMP bmp) {
   return bmp->bpp;
 }
 
-int32_t bmpNColors(BMP bmp) {
+uint32_t bmpNColors(BMP bmp) {
   return bmp->n_colors;
 }
 

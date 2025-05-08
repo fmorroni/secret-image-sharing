@@ -8,15 +8,15 @@
 
 void sisShadows(BMP bmp, u_char r, u_char n) {
   const u_char* img = bmpImage(bmp);
-  int32_t img_size = bmpImageSize(bmp);
+  uint32_t img_size = bmpImageSize(bmp);
 
   // TODO: handle seed properly...
-  int16_t seed = 0x1234;
+  uint16_t seed = 0x1234;
   u_char seed_low = seed & 0xFF;
   u_char seed_high = (seed >> 8) & 0xFF;
   //
 
-  int32_t shadow_size = ceilDiv(img_size, r);
+  uint32_t shadow_size = ceilDiv(img_size, r);
   uint32_t shadow_rows, shadow_cols;
   closestDivisors(shadow_size, &shadow_rows, &shadow_cols);
 
@@ -29,7 +29,7 @@ void sisShadows(BMP bmp, u_char r, u_char n) {
   }
 
   u_char coefficients[r];
-  int i;
+  uint32_t i;
   for (i = 0; i < img_size / r; ++i) {
     for (int j = 0; j < r; ++j) {
       coefficients[j] = img[i * r + j];
