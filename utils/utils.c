@@ -40,8 +40,7 @@ int32_t polynomialModuloEval(u_char order, u_char coefficients[], u_char x) {
 
   uint32_t x_pow = 1;
   for (int i = 0; i < order + 1; ++i) {
-    v += ((int32_t)coefficients[i] * x_pow);
-    v %= MOD;
+    v = (v + (int32_t)coefficients[i] * x_pow) % MOD;
     x_pow = (x_pow * x) % MOD;
   }
 
