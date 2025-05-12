@@ -35,7 +35,7 @@ void sisShadows(BMP bmp, u_char r, u_char n) {
       coefficients[j] = img[i * r + j];
     }
     for (int j = 0; j < n; ++j) {
-      int32_t v = polynomialModuloEval(r - 1, coefficients, MOD, j + 1);
+      int32_t v = polynomialModuloEval(r - 1, coefficients, j + 1);
 
       // TODO: Handle properly.
       if (v == 256) v = 255;
@@ -47,7 +47,7 @@ void sisShadows(BMP bmp, u_char r, u_char n) {
   for (i = i * r, j = 0; i < img_size; ++i, ++j) coefficients[j] = img[i];
   while (j < r) coefficients[j++] = 0;
   for (int j = 0; j < n; ++j) {
-    int32_t v = polynomialModuloEval(r - 1, coefficients, MOD, j + 1);
+    int32_t v = polynomialModuloEval(r - 1, coefficients, j + 1);
 
     // TODO: Handle properly.
     if (v == 256) v = 255;

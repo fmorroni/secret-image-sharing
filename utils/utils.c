@@ -1,3 +1,4 @@
+#include "../globals.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -31,14 +32,14 @@ void closestDivisors(uint32_t N, uint32_t* r_out, uint32_t* c_out) {
   *c_out = best_c;
 }
 
-int32_t polynomialModuloEval(u_char order, u_char coefficients[], uint32_t mod, u_char x) {
+int32_t polynomialModuloEval(u_char order, u_char coefficients[], u_char x) {
   int32_t v = 0;
 
   u_char x_pow = 1;
   for (int i = 0; i < order + 1; ++i) {
     v += ((int32_t)coefficients[i] * x_pow);
-    v %= mod;
-    x_pow = (x_pow * x) % mod;
+    v %= MOD;
+    x_pow = (x_pow * x) % MOD;
   }
 
   return v;
