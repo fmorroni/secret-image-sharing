@@ -29,6 +29,7 @@ uint32_t bmpNColors(BMP bmp);
 Color* bmpColors(BMP bmp);
 uint32_t bmpExtraSize(BMP bmp);
 u_char* bmpExtraData(BMP bmp);
+u_char* bmpReserved(BMP bmp);
 int bmpWriteFile(const char* filename, BMP bmp);
 void bmpPrintHeader(BMP bmp);
 

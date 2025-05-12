@@ -233,6 +233,10 @@ u_char* bmpExtraData(BMP bmp) {
   return bmp->extra_data;
 }
 
+u_char* bmpReserved(BMP bmp) {
+  return bmp->reserved;
+}
+
 int bmpWriteFile(const char* filename, BMP bmp) {
   FILE* file = fopen(filename, "w");
   if (file == NULL) {
