@@ -97,6 +97,18 @@ Color colors[256] = {
   {0xff, 0xff, 0xff, 0x00},
 };
 
+u_char calculateShadowPixel(u_char order, u_char coefficients[], u_char x) {
+  int32_t v;
+  v = polynomialModuloEval(order, coefficients, x);
+  while (v == 256) {
+    int i = 0;
+    while (coefficients[i] == 0) ++i;
+    --coefficients[i];
+    v = polynomialModuloEval(order, coefficients, x);
+  }
+  return (u_char)v;
+}
+
 void sisShadows(BMP bmp, u_char r, u_char n) {
   const u_char* img = bmpImage(bmp);
   uint32_t img_size = bmpImageSize(bmp);
@@ -126,24 +138,19 @@ void sisShadows(BMP bmp, u_char r, u_char n) {
       coefficients[j] = img[i * r + j];
     }
     for (int j = 0; j < n; ++j) {
-      int32_t v = polynomialModuloEval(r - 1, coefficients, j + 1);
-
-      // TODO: Handle properly.
-      if (v == 256) v = 255;
-
-      bmpImage(shadows[j])[i] = v;
+      bmpImage(shadows[j])[i] = calculateShadowPixel(r - 1, coefficients, j + 1);
     }
   }
-  int j;
-  for (i = i * r, j = 0; i < img_size; ++i, ++j) coefficients[j] = img[i];
-  while (j < r) coefficients[j++] = 0;
-  for (int j = 0; j < n; ++j) {
-    int32_t v = polynomialModuloEval(r - 1, coefficients, j + 1);
 
-    // TODO: Handle properly.
-    if (v == 256) v = 255;
-
-    bmpImage(shadows[j])[shadow_size - 1] = v;
+  // If img_size not multiple of r then use last img_size%r pixels, pad with
+  // zeros and calculate a new shadow pixel.
+  if (img_size % r != 0) {
+    int j;
+    for (i = i * r, j = 0; i < img_size; ++i, ++j) coefficients[j] = img[i];
+    while (j < r) coefficients[j++] = 0;
+    for (int j = 0; j < n; ++j) {
+      bmpImage(shadows[j])[shadow_size - 1] = calculateShadowPixel(r - 1, coefficients, j + 1);
+    }
   }
 
   // TODO: remove.
