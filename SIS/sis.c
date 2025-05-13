@@ -2,6 +2,7 @@
 #include "../bmp/bmp.h"
 #include "../globals.h"
 #include "../utils/utils.h"
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -97,16 +98,21 @@ Color colors[256] = {
   {0xff, 0xff, 0xff, 0x00},
 };
 
-u_char calculateShadowPixel(u_char order, u_char coefficients[], u_char x) {
-  int32_t v;
-  v = polynomialModuloEval(order, coefficients, x);
-  while (v == 256) {
-    int i = 0;
-    while (coefficients[i] == 0) ++i;
-    --coefficients[i];
-    v = polynomialModuloEval(order, coefficients, x);
-  }
-  return (u_char)v;
+void calculateShadowPixel(u_char order, u_char coefficients[], u_char n, uint32_t pixels[]) {
+  bool recalculate;
+  do {
+    recalculate = false;
+    for (int i = 0; i < n; ++i) pixels[i] = polynomialModuloEval(order, coefficients, i + 1);
+    for (int i = 0; i < n; ++i) {
+      if (pixels[i] == 256) {
+        int j = 0;
+        while (coefficients[j] == 0) ++j;
+        --coefficients[j];
+        recalculate = true;
+        break;
+      }
+    }
+  } while (recalculate);
 }
 
 void sisShadows(BMP bmp, u_char r, u_char n) {
@@ -137,9 +143,9 @@ void sisShadows(BMP bmp, u_char r, u_char n) {
     for (int j = 0; j < r; ++j) {
       coefficients[j] = img[i * r + j];
     }
-    for (int j = 0; j < n; ++j) {
-      bmpImage(shadows[j])[i] = calculateShadowPixel(r - 1, coefficients, j + 1);
-    }
+    uint32_t pixels[n];
+    calculateShadowPixel(r - 1, coefficients, n, pixels);
+    for (int j = 0; j < n; ++j) bmpImage(shadows[j])[i] = pixels[j];
   }
 
   // If img_size not multiple of r then use last img_size%r pixels, pad with
@@ -148,9 +154,9 @@ void sisShadows(BMP bmp, u_char r, u_char n) {
     int j;
     for (i = i * r, j = 0; i < img_size; ++i, ++j) coefficients[j] = img[i];
     while (j < r) coefficients[j++] = 0;
-    for (int j = 0; j < n; ++j) {
-      bmpImage(shadows[j])[shadow_size - 1] = calculateShadowPixel(r - 1, coefficients, j + 1);
-    }
+    uint32_t pixels[n];
+    calculateShadowPixel(r - 1, coefficients, n, pixels);
+    for (int j = 0; j < n; ++j) bmpImage(shadows[j])[shadow_size - 1] = pixels[j];
   }
 
   // TODO: remove.
