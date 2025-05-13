@@ -115,6 +115,14 @@ void calculateShadowPixel(u_char order, u_char coefficients[], u_char n, uint32_
   } while (recalculate);
 }
 
+void assignShadowPixels(
+  uint32_t shadow_pixel_idx, u_char* coefficients, uint32_t r, uint32_t n, BMP shadows[]
+) {
+  uint32_t pixels[n];
+  calculateShadowPixel(r - 1, coefficients, n, pixels);
+  for (int j = 0; j < n; ++j) bmpImage(shadows[j])[shadow_pixel_idx] = pixels[j];
+}
+
 void sisShadows(BMP bmp, u_char r, u_char n) {
   const u_char* img = bmpImage(bmp);
   uint32_t img_size = bmpImageSize(bmp);
@@ -140,12 +148,8 @@ void sisShadows(BMP bmp, u_char r, u_char n) {
   u_char coefficients[r];
   uint32_t i;
   for (i = 0; i < img_size / r; ++i) {
-    for (int j = 0; j < r; ++j) {
-      coefficients[j] = img[i * r + j];
-    }
-    uint32_t pixels[n];
-    calculateShadowPixel(r - 1, coefficients, n, pixels);
-    for (int j = 0; j < n; ++j) bmpImage(shadows[j])[i] = pixels[j];
+    for (int j = 0; j < r; ++j) coefficients[j] = img[i * r + j];
+    assignShadowPixels(i, coefficients, r, n, shadows);
   }
 
   // If img_size not multiple of r then use last img_size%r pixels, pad with
@@ -154,9 +158,7 @@ void sisShadows(BMP bmp, u_char r, u_char n) {
     int j;
     for (i = i * r, j = 0; i < img_size; ++i, ++j) coefficients[j] = img[i];
     while (j < r) coefficients[j++] = 0;
-    uint32_t pixels[n];
-    calculateShadowPixel(r - 1, coefficients, n, pixels);
-    for (int j = 0; j < n; ++j) bmpImage(shadows[j])[shadow_size - 1] = pixels[j];
+    assignShadowPixels(shadow_size - 1, coefficients, r, n, shadows);
   }
 
   // TODO: remove.
