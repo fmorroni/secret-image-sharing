@@ -92,7 +92,11 @@ int main(int argc, char* argv[]) {
       exit(EXIT_FAILURE);
     }
     bmpPrintHeader(bmp);
-    sisShadows(bmp, 5, 10);
+    BMP shadows[tot_shadows];
+    sisShadows(bmp, min_shadows, tot_shadows, shadows);
+    for (int i = 0; i < tot_shadows; ++i) {
+      bmpWriteFile("asf", shadows[i]);
+    }
     bmpFree(bmp);
   } else {
     BMP shadows[] = {

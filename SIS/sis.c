@@ -81,7 +81,7 @@ void assignShadowPixels(
   uint32_t shadow_pixel_idx, u_char* coefficients, uint32_t min_shadows, uint32_t tot_shadows, BMP shadows[]
 );
 
-void sisShadows(BMP bmp, u_char min_shadows, u_char tot_shadows) {
+void sisShadows(BMP bmp, u_char min_shadows, u_char tot_shadows, BMP shadows[tot_shadows]) {
   const u_char* img = bmpImage(bmp);
   uint32_t img_size = bmpImageSize(bmp);
 
@@ -95,7 +95,6 @@ void sisShadows(BMP bmp, u_char min_shadows, u_char tot_shadows) {
   uint32_t shadow_rows, shadow_cols;
   closestDivisors(shadow_size, &shadow_rows, &shadow_cols);
 
-  BMP shadows[tot_shadows];
   for (u_char i = 0; i < tot_shadows; ++i) {
     shadows[i] = bmpNew(
       shadow_cols, shadow_rows, 8, (u_char[]){seed_low, seed_high, i + 1, 0}, 256, colors, sizeof(uint32_t) * 3,
@@ -117,14 +116,6 @@ void sisShadows(BMP bmp, u_char min_shadows, u_char tot_shadows) {
     for (i = i * min_shadows, j = 0; i < img_size; ++i, ++j) coefficients[j] = img[i];
     while (j < min_shadows) coefficients[j++] = 0;
     assignShadowPixels(shadow_size - 1, coefficients, min_shadows, tot_shadows, shadows);
-  }
-
-  // TODO: remove.
-  for (int i = 0; i < tot_shadows; ++i) {
-    char name[256];
-    snprintf(name, sizeof(name), "../bmp-images/test-shadow-%02d.bmp", i + 1);
-    bmpWriteFile(name, shadows[i]);
-    bmpFree(shadows[i]);
   }
 }
 
