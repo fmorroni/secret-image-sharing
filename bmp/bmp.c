@@ -7,27 +7,29 @@
 #include <string.h>
 #include <sys/types.h>
 
-#define BMP_SIMPLE_CLEANUP(msg, bmp)                                                               \
-  do {                                                                                             \
-    perror(msg);                                                                                   \
-    bmpFree(bmp);                                                                                  \
-    return NULL;                                                                                   \
+#define BMP_SIMPLE_CLEANUP(msg, bmp)                                                                                   \
+  do {                                                                                                                 \
+    perror(msg);                                                                                                       \
+    bmpFree(bmp);                                                                                                      \
+    return NULL;                                                                                                       \
   } while (0)
 
-#define BMP_PARSE_CLEANUP(msg, bmp, file)                                                          \
-  do {                                                                                             \
-    perror(msg);                                                                                   \
-    bmpFree(bmp);                                                                                  \
-    fclose(file);                                                                                  \
-    return NULL;                                                                                   \
+#define BMP_PARSE_CLEANUP(msg, bmp, file)                                                                              \
+  do {                                                                                                                 \
+    perror(msg);                                                                                                       \
+    bmpFree(bmp);                                                                                                      \
+    fclose(file);                                                                                                      \
+    return NULL;                                                                                                       \
   } while (0)
 
-#define BMP_WRITE_CLEANUP(msg, file)                                                               \
-  do {                                                                                             \
-    perror(msg);                                                                                   \
-    fclose(file);                                                                                  \
-    return EXIT_FAILURE;                                                                           \
+#define BMP_WRITE_CLEANUP(msg, file)                                                                                   \
+  do {                                                                                                                 \
+    perror(msg);                                                                                                       \
+    fclose(file);                                                                                                      \
+    return 1;                                                                                                          \
   } while (0)
+
+#define DEFAULT_BPP 8
 
 typedef struct BMP_CDT {
   char id[2];
@@ -52,8 +54,8 @@ typedef struct BMP_CDT {
 } BMP_CDT;
 
 BMP bmpNew(
-  uint32_t width, uint32_t height, uint16_t bpp, u_char reserved[4], uint32_t n_colors,
-  Color colors[n_colors], uint32_t extra_data_size, u_char extra_data[extra_data_size]
+  uint32_t width, uint32_t height, uint16_t bpp, u_char reserved[4], uint32_t n_colors, Color colors[n_colors],
+  uint32_t extra_data_size, u_char extra_data[extra_data_size]
 ) {
   if (bpp % 8 != 0) {
     errno = EINVAL;
@@ -243,7 +245,7 @@ int bmpWriteFile(const char* filename, BMP bmp) {
   FILE* file = fopen(filename, "w");
   if (file == NULL) {
     perror("fopen");
-    return EXIT_FAILURE;
+    return 1;
   }
 
   size_t written = fwrite(bmp, 2, 1, file);
@@ -287,8 +289,7 @@ void bmpPrintHeader(BMP bmp) {
   printf("ID:                 %c%c\n", bmp->id[0], bmp->id[1]);
   printf("Filesize:           %d bytes\n", bmp->filesize);
   printf(
-    "Reserved:           %02x %02x %02x %02x\n", bmp->reserved[0], bmp->reserved[1],
-    bmp->reserved[2], bmp->reserved[3]
+    "Reserved:           %02x %02x %02x %02x\n", bmp->reserved[0], bmp->reserved[1], bmp->reserved[2], bmp->reserved[3]
   );
   printf("Pixel Data Offset:  %d bytes\n", bmp->offset);
   printf("Info Header Size:   %d bytes\n", bmp->info_header_size);
