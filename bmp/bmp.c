@@ -1,5 +1,6 @@
 #include "bmp.h"
 #include <errno.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -14,14 +15,6 @@
     return NULL;                                                                                                       \
   } while (0)
 
-#define BMP_PARSE_CLEANUP(msg, bmp, file)                                                                              \
-  do {                                                                                                                 \
-    perror(msg);                                                                                                       \
-    bmpFree(bmp);                                                                                                      \
-    fclose(file);                                                                                                      \
-    return NULL;                                                                                                       \
-  } while (0)
-
 #define BMP_WRITE_CLEANUP(msg, file)                                                                                   \
   do {                                                                                                                 \
     perror(msg);                                                                                                       \
@@ -29,7 +22,9 @@
     return 1;                                                                                                          \
   } while (0)
 
-#define DEFAULT_BPP 8
+#define BYTE_SIZE 8
+#define BASE_HEADER_SIZE 14
+#define DEFAULT_INFO_HEADER_SIZE 40
 
 typedef struct BMP_CDT {
   char id[2];
@@ -53,11 +48,19 @@ typedef struct BMP_CDT {
   u_char* image;
 } BMP_CDT;
 
+void printColor(Color color);
+static bool freadWithPerror(FILE* file, void* dest, size_t size, const char* err);
+static bool parseBaseHeader(FILE* file, BMP bmp);
+static bool parseInfoHeader(FILE* file, BMP bmp);
+static bool parseColorTable(FILE* file, BMP bmp);
+static bool parseExtraData(FILE* file, BMP bmp);
+static bool parseImageData(FILE* file, BMP bmp);
+
 BMP bmpNew(
   uint32_t width, uint32_t height, uint16_t bpp, u_char reserved[4], uint32_t n_colors, Color colors[n_colors],
   uint32_t extra_data_size, u_char extra_data[extra_data_size]
 ) {
-  if (bpp % 8 != 0) {
+  if (bpp % BYTE_SIZE != 0) {
     errno = EINVAL;
     return NULL;
   }
@@ -70,9 +73,9 @@ BMP bmpNew(
   bmp->image = NULL;
   bmp->extra_data = NULL;
 
-  uint32_t image_size = width * height * bpp / 8;
+  uint32_t image_size = width * height * bpp / BYTE_SIZE;
   uint32_t extra_data_bytes = extra_data_size == 0 ? 0 : 4 + extra_data_size;
-  uint32_t header_size = 54 + sizeof(Color) * n_colors + extra_data_bytes;
+  uint32_t header_size = BASE_HEADER_SIZE + DEFAULT_INFO_HEADER_SIZE + (sizeof(Color) * n_colors) + extra_data_bytes;
 
   bmp->id[0] = 'B';
   bmp->id[1] = 'M';
@@ -80,7 +83,7 @@ BMP bmpNew(
   if (reserved != NULL) memcpy(bmp->reserved, reserved, 4);
   else memset(bmp->reserved, 0, 4);
   bmp->offset = header_size;
-  bmp->info_header_size = 40;
+  bmp->info_header_size = DEFAULT_INFO_HEADER_SIZE;
   bmp->width = width;
   bmp->height = height;
   bmp->n_planes = 1;
@@ -126,57 +129,20 @@ BMP bmpParse(const char* filename) {
   BMP bmp = malloc(sizeof(BMP_CDT));
   if (bmp == NULL) {
     perror("malloc");
+    fclose(file);
     return NULL;
   }
 
-  // I need to split the reading because in the strcut, the `filesize` field
-  // will be shifted 2 bytes to align with the closest dword.
-  size_t read = fread(bmp, 2, 1, file);
-  if (read != 1) BMP_PARSE_CLEANUP("fread", bmp, file);
-
-  // This reads the default header upto info_header_size.
-  read = fread(&bmp->filesize, 16, 1, file);
-  if (read != 1) BMP_PARSE_CLEANUP("fread", bmp, file);
-
-  // The size specified in info_header_size includes itself so we subtruct its size.
-  read = fread(&bmp->width, bmp->info_header_size - 4, 1, file);
-  if (read != 1) BMP_PARSE_CLEANUP("fread", bmp, file);
+  if (!parseBaseHeader(file, bmp) || !parseInfoHeader(file, bmp) || !parseColorTable(file, bmp) ||
+      !parseExtraData(file, bmp) || !parseImageData(file, bmp)) {
+    bmpFree(bmp);
+    fclose(file);
+    return NULL;
+  }
 
   if (bmp->n_important_colors != 0) {
     fprintf(stderr, "Number of important colors != 0. Idk what to do, look it up...");
   }
-
-  // Available colors are sometimes (not sure why not always...) defined in the header,
-  // in a 4 byte format for B-G-R-Filler.
-  if (bmp->n_colors > 0) {
-    size_t color_bytes = sizeof(Color) * bmp->n_colors;
-    bmp->colors = malloc(color_bytes);
-    if (bmp->colors == NULL) BMP_PARSE_CLEANUP("malloc", bmp, file);
-
-    read = fread(bmp->colors, color_bytes, 1, file);
-    if (read != 1) BMP_PARSE_CLEANUP("fread", bmp, file);
-  } else bmp->colors = NULL;
-
-  if (ftell(file) != bmp->offset) {
-    read = fread(&bmp->extra_data_size, 4, 1, file);
-    if (read != 1) BMP_PARSE_CLEANUP("fread", bmp, file);
-    if (bmp->extra_data_size > 0) {
-      bmp->extra_data = malloc(bmp->extra_data_size);
-      if (bmp->extra_data == NULL) BMP_PARSE_CLEANUP("malloc", bmp, file);
-      read = fread(bmp->extra_data, bmp->extra_data_size, 1, file);
-      if (read != 1) BMP_PARSE_CLEANUP("fread", bmp, file);
-    }
-  } else {
-    bmp->extra_data_size = 0;
-    bmp->extra_data = NULL;
-  }
-
-  bmp->image = malloc(bmp->image_size);
-  if (bmp->image == NULL) BMP_PARSE_CLEANUP("malloc", bmp, file);
-
-  if (fseek(file, bmp->offset, SEEK_SET) != 0) BMP_PARSE_CLEANUP("fseek", bmp, file);
-  read = fread(bmp->image, 1, bmp->image_size, file);
-  if (read != bmp->image_size) BMP_PARSE_CLEANUP("fread", bmp, file);
 
   if (fclose(file) != 0) {
     perror("fclose");
@@ -186,18 +152,18 @@ BMP bmpParse(const char* filename) {
   return bmp;
 }
 
-void bmpFree(BMP header) {
-  if (header != NULL) {
-    if (header->colors != NULL) {
-      free(header->colors);
+void bmpFree(BMP bmp) {
+  if (bmp != NULL) {
+    if (bmp->colors != NULL) {
+      free(bmp->colors);
     }
-    if (header->image != NULL) {
-      free(header->image);
+    if (bmp->image != NULL) {
+      free(bmp->image);
     }
-    if (header->extra_data != NULL) {
-      free(header->extra_data);
+    if (bmp->extra_data != NULL) {
+      free(bmp->extra_data);
     }
-    free(header);
+    free(bmp);
   }
 }
 
@@ -251,10 +217,10 @@ int bmpWriteFile(const char* filename, BMP bmp) {
   size_t written = fwrite(bmp, 2, 1, file);
   if (written != 1) BMP_WRITE_CLEANUP("fwrite", file);
 
-  written = fwrite(&bmp->filesize, 16, 1, file);
+  written = fwrite(&bmp->filesize, BASE_HEADER_SIZE - 2, 1, file);
   if (written != 1) BMP_WRITE_CLEANUP("fwrite", file);
 
-  written = fwrite(&bmp->width, bmp->info_header_size - 4, 1, file);
+  written = fwrite(&bmp->info_header_size, bmp->info_header_size, 1, file);
   if (written != 1) BMP_WRITE_CLEANUP("fwrite", file);
 
   if (bmp->n_colors > 0) {
@@ -278,10 +244,6 @@ int bmpWriteFile(const char* filename, BMP bmp) {
     return 1;
   }
   return 0;
-}
-
-void printColor(Color c) {
-  printf("#%02x%02x%02x", c.r, c.g, c.b);
 }
 
 void bmpPrintHeader(BMP bmp) {
@@ -319,4 +281,91 @@ void bmpPrintHeader(BMP bmp) {
     }
     printf("]\n");
   }
+}
+
+// Internal functions
+
+void printColor(Color color) {
+  printf("#%02x%02x%02x", color.r, color.g, color.b);
+}
+
+static bool freadWithPerror(FILE* file, void* dest, size_t size, const char* err) {
+  if (fread(dest, size, 1, file) != 1) {
+    perror(err);
+    return false;
+  }
+  return true;
+}
+
+static bool parseBaseHeader(FILE* file, BMP bmp) {
+  // I need to split the reading because in the strcut, the `filesize` field
+  // will be shifted 2 bytes to align with the closest dword.
+  if (!freadWithPerror(file, bmp, 2, "fread base")) return false;
+  return freadWithPerror(file, &bmp->filesize, BASE_HEADER_SIZE - 2, "fread base");
+}
+
+static bool parseInfoHeader(FILE* file, BMP bmp) {
+  if (!freadWithPerror(file, &bmp->info_header_size, sizeof(uint32_t), "fread info_size")) return false;
+  return freadWithPerror(
+    file, ((uint8_t*)&bmp->info_header_size) + sizeof(uint32_t), bmp->info_header_size - sizeof(uint32_t), "fread info"
+  );
+}
+
+static bool parseColorTable(FILE* file, BMP bmp) {
+  if (bmp->n_colors == 0) {
+    bmp->colors = NULL;
+    return true;
+  }
+
+  size_t color_bytes = bmp->n_colors * sizeof(Color);
+  bmp->colors = malloc(color_bytes);
+  if (!bmp->colors) {
+    perror("malloc colors");
+    return false;
+  }
+
+  return freadWithPerror(file, bmp->colors, color_bytes, "fread colors");
+}
+
+static bool parseExtraData(FILE* file, BMP bmp) {
+  if (ftell(file) == bmp->offset) {
+    bmp->extra_data_size = 0;
+    bmp->extra_data = NULL;
+    return true;
+  }
+
+  if (!freadWithPerror(file, &bmp->extra_data_size, sizeof(uint32_t), "fread extra size")) return false;
+
+  if (bmp->extra_data_size == 0) {
+    bmp->extra_data = NULL;
+    return true;
+  }
+
+  bmp->extra_data = malloc(bmp->extra_data_size);
+  if (!bmp->extra_data) {
+    perror("malloc extra data");
+    return false;
+  }
+
+  return freadWithPerror(file, bmp->extra_data, bmp->extra_data_size, "fread extra");
+}
+
+static bool parseImageData(FILE* file, BMP bmp) {
+  if (fseek(file, bmp->offset, SEEK_SET) != 0) {
+    perror("fseek");
+    return false;
+  }
+
+  bmp->image = malloc(bmp->image_size);
+  if (!bmp->image) {
+    perror("malloc image");
+    return false;
+  }
+
+  if (fread(bmp->image, 1, bmp->image_size, file) != bmp->image_size) {
+    perror("fread image");
+    return false;
+  }
+
+  return true;
 }

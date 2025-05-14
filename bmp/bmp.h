@@ -2,7 +2,6 @@
 #define BMP_H
 
 #include <stdint.h>
-#include <stdio.h>
 #include <sys/types.h>
 
 typedef struct BMP_CDT* BMP;
