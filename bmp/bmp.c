@@ -269,6 +269,10 @@ int bmpWriteFile(const char* filename, BMP bmp) {
   written = fwrite(bmp->image, bmp->image_size, 1, file);
   if (written != 1) BMP_WRITE_CLEANUP("fwrite", file);
 
+  if (fclose(file) != 0) {
+    perror("fclose");
+    return 1;
+  }
   return 0;
 }
 
