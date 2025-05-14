@@ -65,6 +65,8 @@ BMP bmpNew(
     perror("malloc");
     return NULL;
   }
+  bmp->image = NULL;
+  bmp->extra_data = NULL;
 
   uint32_t image_size = width * height * bpp / 8;
   uint32_t extra_data_bytes = extra_data_size == 0 ? 0 : 4 + extra_data_size;
