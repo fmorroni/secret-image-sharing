@@ -1,7 +1,7 @@
 #define _GNU_SOURCE
 
-#include "SIS/sis.h"
-#include "bmp/bmp.h"
+#include "../SIS/sis.h"
+#include "../bmp/bmp.h"
 #include <errno.h>
 #include <getopt.h>
 #include <limits.h>
