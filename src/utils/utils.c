@@ -57,17 +57,17 @@ void swapRows(size_t cols, int32_t* matrix, size_t swap_row_1, size_t swap_row_2
 
 // TODO: remove
 void printMatrix(uint32_t rows, uint32_t cols, int32_t* matrix) {
-  for (int i = 0; i < rows; ++i) {
-    for (int j = 0; j < cols; ++j) {
+  for (uint32_t i = 0; i < rows; ++i) {
+    for (uint32_t j = 0; j < cols; ++j) {
       printf("%3d ", matrix[(i * cols) + j]);
     }
     puts("");
   }
 }
 
-void printMatrix_u_char(uint32_t rows, uint32_t cols, u_char* matrix) {
-  for (int i = 0; i < rows; ++i) {
-    for (int j = 0; j < cols; ++j) {
+void printMatrix_uint8_t(uint32_t rows, uint32_t cols, uint8_t* matrix) {
+  for (uint32_t i = 0; i < rows; ++i) {
+    for (uint32_t j = 0; j < cols; ++j) {
       printf("%3d ", matrix[(i * cols) + j]);
     }
     puts("");

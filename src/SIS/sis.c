@@ -130,7 +130,7 @@ BMP sisRecover(uint8_t min_shadows, BMP shadows[min_shadows]) {
   // uint32_t shadow_height = bmpHeight(shadows[0]);
   uint16_t* reserved;
   uint16_t shadows_x[min_shadows];
-  for (int i = 0; i < min_shadows; ++i) {
+  for (uint32_t i = 0; i < min_shadows; ++i) {
     reserved = (uint16_t*)bmpReserved(shadows[i]);
     shadows_x[i] = reserved[1];
   }
@@ -146,7 +146,7 @@ BMP sisRecover(uint8_t min_shadows, BMP shadows[min_shadows]) {
   uint32_t img_size = bmpImageSize(secret);
   uint32_t shadow_size = bmpImageSize(shadows[0]);
   uint32_t img_idx = 0;
-  for (int k = 0; k < shadow_size; ++k) {
+  for (uint32_t k = 0; k < shadow_size; ++k) {
     int32_t ec_system[min_shadows][min_shadows + 1];
     for (int i = 0; i < min_shadows; ++i) {
       int32_t x_pow = 1;

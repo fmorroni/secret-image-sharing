@@ -266,7 +266,7 @@ void bmpPrintHeader(BMP bmp) {
   printf("Important Colors:   %d\n", bmp->n_important_colors);
   if (bmp->n_colors > 0) {
     printf("Colors:             [ ");
-    for (int i = 0; i < bmp->n_colors; ++i) {
+    for (uint32_t i = 0; i < bmp->n_colors; ++i) {
       printColor(bmp->colors[i]);
       if (i < bmp->n_colors - 1) printf(", ");
     }
