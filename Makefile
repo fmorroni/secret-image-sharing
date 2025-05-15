@@ -1,33 +1,34 @@
-# Compiler and flags
 CC := gcc
-CFLAGS := -Wall --pedantic -fsanitize=address -Wextra -std=c11 -O2 -I./src
+CFLAGS := -Wall --pedantic -fsanitize=address -Wextra -std=c11 -O2 -I. -Isrc
 
-# Source and object files (excluding test/)
 SRC_DIR := src
-OBJ_DIR := build
+OBJ_DIR = build
 
-SRCS := $(wildcard $(SRC_DIR)/*/*.c)
-SRCS := $(filter-out $(SRC_DIR)/test/%, $(SRCS))
-OBJS := $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRCS))
+SRCS = $(shell find $(SRC_DIR) -name "*.c" ! -path "$(SRC_DIR)/test/*")
+HDRS = $(shell find $(SRC_DIR) -name "*.h" ! -path "$(SRC_DIR)/test/*")
+OBJS = $(SRCS:%.c=$(OBJ_DIR)/%.o)
 
-# Target binary
 TARGET := bin/app
 
-# Default target
+CLANG_TIDY = clang-tidy
+CLANG_TIDY_OPTS = --quiet
+
+.PHONY: all clean lint
+
 all: $(TARGET)
 
-# Rule to build the target
 $(TARGET): $(OBJS)
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -o $@ $^
 
-# Rule to build object files
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
+$(OBJ_DIR)/%.o: %.c
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Clean rule
 clean:
 	rm -rf $(OBJ_DIR) $(TARGET)
 
-.PHONY: all clean
+lint:
+	@echo "Running clang-tidy on source files..."
+	@$(foreach file, $(SRCS) $(HDRS), \
+		$(CLANG_TIDY) $(file) $(CLANG_TIDY_OPTS) -- -I. -Isrc || exit 1;)
