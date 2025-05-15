@@ -1,0 +1,29 @@
+Checks:                       '*,
+                                -abseil-*,
+                                -altera-*,
+                                -android-*,
+                                -fuchsia-*,
+                                -google-*,
+                                -llvm*,
+                                -readability-avoid-const-params-in-decls,
+                                -bugprone-reserved-identifier,
+                                -misc-no-recursion,
+                                -bugprone-easily-swappable-parameters,
+                                -cert-*,
+                                -readability-else-after-return,
+                                -hicpp-braces-around-statements,
+                                -readability-braces-around-statements,
+                                -cppcoreguidelines-*,
+                                -clang-diagnostic-unused-command-line-argument,
+                                -concurrency-mt-unsafe,
+                                -modernize-macro-to-enum,
+                                -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
+                                -readability-magic-numbers,
+                                -readability-isolate-declaration,
+                              '
+HeaderFilterRegex:            '.*'
+FormatStyle:                  'file'
+WarningsAsErrors:             '*'
+CheckOptions:
+  readability-identifier-length.IgnoredParameterNames: '^([n]|fp|id|to|x)$'
+  readability-identifier-length.IgnoredVariableNames: '^(id|i|j|m)$'
