@@ -78,7 +78,7 @@ Color colors[256] = {
 
 void calculateShadowPixel(uint8_t min_shadows, uint8_t coefficients[], uint8_t tot_shadows, uint32_t pixels[]);
 void assignShadowPixels(
-  uint32_t shadow_pixel_idx, uint8_t* coefficients, uint32_t min_shadows, uint32_t tot_shadows, BMP shadows[]
+  uint32_t shadow_pixel_idx, uint8_t* coefficients, uint8_t min_shadows, uint8_t tot_shadows, BMP shadows[]
 );
 
 void sisShadows(BMP bmp, uint8_t min_shadows, uint8_t tot_shadows, BMP shadows[tot_shadows]) {
@@ -218,7 +218,7 @@ void calculateShadowPixel(uint8_t min_shadows, uint8_t coefficients[], uint8_t t
 }
 
 void assignShadowPixels(
-  uint32_t shadow_pixel_idx, uint8_t* coefficients, uint32_t min_shadows, uint32_t tot_shadows, BMP shadows[]
+  uint32_t shadow_pixel_idx, uint8_t* coefficients, uint8_t min_shadows, uint8_t tot_shadows, BMP shadows[]
 ) {
   uint32_t pixels[tot_shadows];
   calculateShadowPixel(min_shadows, coefficients, tot_shadows, pixels);
