@@ -36,7 +36,7 @@ int main(int argc, char* argv[]) {
   // bmpFree(secret);
   // }
 
-  for (int i = 0; i < args->_parsed_bmps; ++i) {
+  for (int i = 0; i < args->parsed_bmps; ++i) {
     bmpPrintHeader(args->dir_bmps[i]);
   }
 

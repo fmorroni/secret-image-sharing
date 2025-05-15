@@ -37,7 +37,7 @@ Args* argsParse(int argc, char* argv[]) {
   int32_t tot_shadows = -1;
   args->directory = NULL;
   args->_directory_allocated = NULL;
-  args->_parsed_bmps = 0;
+  args->parsed_bmps = 0;
 
   int opt;
   while ((opt = getopt_long(argc, argv, "hpdrs:k:n:D:", long_options, NULL)) != -1) {
@@ -133,7 +133,7 @@ Args* argsParse(int argc, char* argv[]) {
 void argsFree(Args* args) {
   // `free(NULL)` is a no-op so it's fine to have no check.
   free(args->_directory_allocated);
-  for (int i = 0; i < args->_parsed_bmps; ++i) bmpFree(args->dir_bmps[i]);
+  for (int i = 0; i < args->parsed_bmps; ++i) bmpFree(args->dir_bmps[i]);
   free((void*)args->dir_bmps);
   free(args);
 }
@@ -181,7 +181,7 @@ void collectBmpFiles(Args* args, int needed_count) {
         argsFree(args);
         exit(EXIT_FAILURE);
       }
-      args->_parsed_bmps = ++count;
+      args->parsed_bmps = ++count;
     }
   }
 
