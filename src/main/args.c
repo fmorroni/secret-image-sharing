@@ -48,7 +48,7 @@ Args* argsParse(int argc, char* argv[]) {
     case 'p':;
       BMP bmp = bmpParse(args->secret_filename);
       if (bmp == NULL) {
-        fprintf(stderr, "Error parsing bmp");
+        fprintf(stderr, "Error parsing bmp\n");
         exit(EXIT_FAILURE);
       }
       bmpPrintHeader(bmp);
@@ -177,7 +177,7 @@ void collectBmpFiles(Args* args, int needed_count) {
       printf("parsing bmp: `%s`...\n", full_path);
       args->dir_bmps[count] = bmpParse(full_path);
       if (args->dir_bmps[count] == NULL) {
-        fprintf(stderr, "Error parsing bmp");
+        fprintf(stderr, "Error parsing bmp `%s`\n", full_path);
         argsFree(args);
         exit(EXIT_FAILURE);
       }
