@@ -28,7 +28,7 @@
 typedef struct BMP_CDT {
   char id[2];
   uint32_t filesize;              // In bytes.
-  uint8_t reserved[4];             //
+  uint8_t reserved[4];            //
   uint32_t offset;                //
   uint32_t info_header_size;      // Info header starts starts at this address.
   uint32_t width;                 // In pixels.
@@ -126,6 +126,9 @@ BMP bmpParse(const char* filename) {
   }
 
   BMP bmp = malloc(sizeof(BMP_CDT));
+  bmp->colors = NULL;
+  bmp->image = NULL;
+  bmp->extra_data = NULL;
   if (bmp == NULL) {
     perror("malloc");
     fclose(file);
@@ -300,6 +303,7 @@ static bool parseBaseHeader(FILE* file, BMP bmp) {
   // I need to split the reading because in the strcut, the `filesize` field
   // will be shifted 2 bytes to align with the closest dword.
   if (!freadWithPerror(file, bmp, 2, "fread base")) return false;
+  if (bmp->id[0] != 'B' || bmp->id[1] != 'M') return false;
   return freadWithPerror(file, &bmp->filesize, BASE_HEADER_SIZE - 2, "fread base");
 }
 
