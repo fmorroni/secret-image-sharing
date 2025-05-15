@@ -9,7 +9,6 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/types.h>
 #include <unistd.h>
 
 typedef struct Args {
@@ -25,7 +24,7 @@ typedef struct Args {
 Args argsParse(int argc, char* argv[]);
 void argsFree(Args args);
 void printHelp(const char* executable_name);
-u_char strToUChar(const char* str);
+uint8_t strToUChar(const char* str);
 
 int main(int argc, char* argv[]) {
   Args args = argsParse(argc, argv);
@@ -187,7 +186,7 @@ void printHelp(const char* executable_name) {
   printf("                             (default: current working directory)\n");
 }
 
-u_char strToUChar(const char* str) {
+uint8_t strToUChar(const char* str) {
   char* endptr;
   errno = 0;
   long val = strtol(str, &endptr, 10);
@@ -205,5 +204,5 @@ u_char strToUChar(const char* str) {
     exit(EXIT_FAILURE);
   }
 
-  return (u_char)val;
+  return (uint8_t)val;
 }

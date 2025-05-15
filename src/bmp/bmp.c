@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
 
 #define BMP_SIMPLE_CLEANUP(msg, bmp)                                                                                   \
   do {                                                                                                                 \
@@ -29,7 +28,7 @@
 typedef struct BMP_CDT {
   char id[2];
   uint32_t filesize;              // In bytes.
-  u_char reserved[4];             //
+  uint8_t reserved[4];             //
   uint32_t offset;                //
   uint32_t info_header_size;      // Info header starts starts at this address.
   uint32_t width;                 // In pixels.
@@ -44,8 +43,8 @@ typedef struct BMP_CDT {
   uint32_t n_important_colors;    // Number of important colors. (???)
   Color* colors;
   uint32_t extra_data_size;
-  u_char* extra_data;
-  u_char* image;
+  uint8_t* extra_data;
+  uint8_t* image;
 } BMP_CDT;
 
 void printColor(Color color);
@@ -57,8 +56,8 @@ static bool parseExtraData(FILE* file, BMP bmp);
 static bool parseImageData(FILE* file, BMP bmp);
 
 BMP bmpNew(
-  uint32_t width, uint32_t height, uint16_t bpp, u_char reserved[4], uint32_t n_colors, Color colors[n_colors],
-  uint32_t extra_data_size, u_char extra_data[extra_data_size]
+  uint32_t width, uint32_t height, uint16_t bpp, uint8_t reserved[4], uint32_t n_colors, Color colors[n_colors],
+  uint32_t extra_data_size, uint8_t extra_data[extra_data_size]
 ) {
   if (bpp % BYTE_SIZE != 0) {
     errno = EINVAL;
@@ -167,7 +166,7 @@ void bmpFree(BMP bmp) {
   }
 }
 
-u_char* bmpImage(BMP bmp) {
+uint8_t* bmpImage(BMP bmp) {
   return bmp->image;
 }
 
@@ -199,11 +198,11 @@ uint32_t bmpExtraSize(BMP bmp) {
   return bmp->extra_data_size;
 }
 
-u_char* bmpExtraData(BMP bmp) {
+uint8_t* bmpExtraData(BMP bmp) {
   return bmp->extra_data;
 }
 
-u_char* bmpReserved(BMP bmp) {
+uint8_t* bmpReserved(BMP bmp) {
   return bmp->reserved;
 }
 

@@ -7,7 +7,6 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/types.h>
 
 // TODO: remove this... Won't be necessary when steganography.
 Color colors[256] = {
@@ -77,34 +76,34 @@ Color colors[256] = {
   {0xfc, 0xfc, 0xfc, 0x00}, {0xfd, 0xfd, 0xfd, 0x00}, {0xfe, 0xfe, 0xfe, 0x00}, {0xff, 0xff, 0xff, 0x00},
 };
 
-void calculateShadowPixel(u_char min_shadows, u_char coefficients[], u_char tot_shadows, uint32_t pixels[]);
+void calculateShadowPixel(uint8_t min_shadows, uint8_t coefficients[], uint8_t tot_shadows, uint32_t pixels[]);
 void assignShadowPixels(
-  uint32_t shadow_pixel_idx, u_char* coefficients, uint32_t min_shadows, uint32_t tot_shadows, BMP shadows[]
+  uint32_t shadow_pixel_idx, uint8_t* coefficients, uint32_t min_shadows, uint32_t tot_shadows, BMP shadows[]
 );
 
-void sisShadows(BMP bmp, u_char min_shadows, u_char tot_shadows, BMP shadows[tot_shadows]) {
+void sisShadows(BMP bmp, uint8_t min_shadows, uint8_t tot_shadows, BMP shadows[tot_shadows]) {
   assert(min_shadows >= 2 && tot_shadows >= min_shadows);
-  const u_char* img = bmpImage(bmp);
+  const uint8_t* img = bmpImage(bmp);
   uint32_t img_size = bmpImageSize(bmp);
 
   // TODO: handle seed properly...
   uint32_t seed = 0x1234;
-  u_char seed_low = seed & 0xFFU;
-  u_char seed_high = (seed >> 8U) & 0xFFU;
+  uint8_t seed_low = seed & 0xFFU;
+  uint8_t seed_high = (seed >> 8U) & 0xFFU;
   //
 
   uint32_t shadow_size = ceilDiv(img_size, min_shadows);
   uint32_t shadow_rows, shadow_cols;
   closestDivisors(shadow_size, &shadow_rows, &shadow_cols);
 
-  for (u_char i = 0; i < tot_shadows; ++i) {
+  for (uint8_t i = 0; i < tot_shadows; ++i) {
     shadows[i] = bmpNew(
-      shadow_cols, shadow_rows, 8, (u_char[]){seed_low, seed_high, i + 1, 0}, 256, colors, sizeof(uint32_t) * 3,
-      (u_char*)(uint32_t[]){bmpWidth(bmp), bmpHeight(bmp), bmpBpp(bmp)}
+      shadow_cols, shadow_rows, 8, (uint8_t[]){seed_low, seed_high, i + 1, 0}, 256, colors, sizeof(uint32_t) * 3,
+      (uint8_t*)(uint32_t[]){bmpWidth(bmp), bmpHeight(bmp), bmpBpp(bmp)}
     );
   }
 
-  u_char coefficients[min_shadows];
+  uint8_t coefficients[min_shadows];
   uint32_t i;
   for (i = 0; i < img_size / min_shadows; ++i) {
     for (int j = 0; j < min_shadows; ++j) coefficients[j] = img[(i * min_shadows) + j];
@@ -121,7 +120,7 @@ void sisShadows(BMP bmp, u_char min_shadows, u_char tot_shadows, BMP shadows[tot
   }
 }
 
-BMP sisRecover(u_char min_shadows, BMP shadows[min_shadows]) {
+BMP sisRecover(uint8_t min_shadows, BMP shadows[min_shadows]) {
   uint32_t extra_data_size = bmpExtraSize(shadows[0]);
   if (extra_data_size < 3 * sizeof(uint32_t)) {
     fprintf(stderr, "Incorrect shadow format. Missing secret image info.");
@@ -143,7 +142,7 @@ BMP sisRecover(u_char min_shadows, BMP shadows[min_shadows]) {
   uint32_t secret_bpp = secret_info[2];
   uint32_t n_colors = secret_bpp > 8 ? 0 : 256;
   BMP secret = bmpNew(secret_width, secret_height, secret_bpp, NULL, n_colors, n_colors == 0 ? NULL : colors, 0, NULL);
-  u_char* img = bmpImage(secret);
+  uint8_t* img = bmpImage(secret);
   uint32_t img_size = bmpImageSize(secret);
   uint32_t shadow_size = bmpImageSize(shadows[0]);
   uint32_t img_idx = 0;
@@ -157,7 +156,7 @@ BMP sisRecover(u_char min_shadows, BMP shadows[min_shadows]) {
       }
       ec_system[i][min_shadows] = bmpImage(shadows[i])[k];
     }
-    u_char coefs[min_shadows];
+    uint8_t coefs[min_shadows];
     solveSystem(min_shadows, min_shadows + 1, ec_system[0], coefs);
     for (int i = 0; i < min_shadows && img_idx < img_size; ++i, ++img_idx) {
       img[img_idx] = coefs[i];
@@ -200,7 +199,7 @@ BMP sisRecover(u_char min_shadows, BMP shadows[min_shadows]) {
 
 // Internal functions
 
-void calculateShadowPixel(u_char min_shadows, u_char coefficients[], u_char tot_shadows, uint32_t pixels[]) {
+void calculateShadowPixel(uint8_t min_shadows, uint8_t coefficients[], uint8_t tot_shadows, uint32_t pixels[]) {
   bool recalculate;
   do {
     recalculate = false;
@@ -219,7 +218,7 @@ void calculateShadowPixel(u_char min_shadows, u_char coefficients[], u_char tot_
 }
 
 void assignShadowPixels(
-  uint32_t shadow_pixel_idx, u_char* coefficients, uint32_t min_shadows, uint32_t tot_shadows, BMP shadows[]
+  uint32_t shadow_pixel_idx, uint8_t* coefficients, uint32_t min_shadows, uint32_t tot_shadows, BMP shadows[]
 ) {
   uint32_t pixels[tot_shadows];
   calculateShadowPixel(min_shadows, coefficients, tot_shadows, pixels);

@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
 
 uint32_t ceilDiv(uint32_t numerator, uint32_t denominator) {
   if (denominator == 0) {
@@ -36,7 +35,7 @@ void closestDivisors(uint32_t size, uint32_t* rows_out, uint32_t* cols_out) {
   *cols_out = best_c;
 }
 
-uint32_t polynomialModuloEval(u_char order, const u_char coefficients[], u_char x) {
+uint32_t polynomialModuloEval(uint8_t order, const uint8_t coefficients[], uint8_t x) {
   uint32_t val = 0;
 
   uint32_t x_pow = 1;
@@ -50,7 +49,7 @@ uint32_t polynomialModuloEval(u_char order, const u_char coefficients[], u_char 
 
 void swapRows(size_t cols, int32_t* matrix, size_t swap_row_1, size_t swap_row_2) {
   uint32_t col_byte_size = cols * sizeof(matrix[0]);
-  u_char aux[col_byte_size];
+  uint8_t aux[col_byte_size];
   memcpy(aux, &matrix[swap_row_1 * cols], col_byte_size);
   memcpy(&matrix[swap_row_1 * cols], &matrix[swap_row_2 * cols], col_byte_size);
   memcpy(&matrix[swap_row_2 * cols], aux, col_byte_size);
@@ -102,7 +101,7 @@ void gaussEliminationModulo(uint32_t rows, uint32_t cols, int32_t* matrix) {
   while (row_pivot < rows && col_pivot < cols) {
     // Find the k-th pivot.
     uint32_t i_max = row_pivot;
-    u_char max = m[i_max][col_pivot];
+    uint8_t max = m[i_max][col_pivot];
     for (uint32_t i = i_max + 1; i < rows; ++i) {
       if (abs(m[i][col_pivot]) > max) {
         max = m[i][col_pivot];
@@ -131,7 +130,7 @@ void gaussEliminationModulo(uint32_t rows, uint32_t cols, int32_t* matrix) {
   }
 }
 
-void solveSystem(uint32_t rows, uint32_t cols, int32_t* matrix, u_char* coeficients) {
+void solveSystem(uint32_t rows, uint32_t cols, int32_t* matrix, uint8_t* coeficients) {
   if (cols != rows + 1) {
     fprintf(stderr, "Invalid matrix dimensions: %d x %d", rows, cols);
     exit(EXIT_FAILURE);

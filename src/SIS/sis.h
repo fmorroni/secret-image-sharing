@@ -2,9 +2,9 @@
 #define SIS_H
 
 #include "../bmp/bmp.h"
-#include <sys/types.h>
+#include <stdint.h>
 
-void sisShadows(BMP bmp, u_char min_shadows, u_char tot_shadows, BMP shadows[tot_shadows]);
-BMP sisRecover(u_char min_shadows, BMP shadows[min_shadows]);
+void sisShadows(BMP bmp, uint8_t min_shadows, uint8_t tot_shadows, BMP shadows[tot_shadows]);
+BMP sisRecover(uint8_t min_shadows, BMP shadows[min_shadows]);
 
 #endif
