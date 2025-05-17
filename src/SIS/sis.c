@@ -147,9 +147,9 @@ BMP sisRecover(uint8_t min_shadows, BMP shadows[min_shadows]) {
   uint32_t shadow_size = bmpImageSize(shadows[0]);
   uint32_t img_idx = 0;
   for (uint32_t k = 0; k < shadow_size; ++k) {
-    int32_t ec_system[min_shadows][min_shadows + 1];
+    uint32_t ec_system[min_shadows][min_shadows + 1];
     for (int i = 0; i < min_shadows; ++i) {
-      int32_t x_pow = 1;
+      uint32_t x_pow = 1;
       for (int j = 0; j < min_shadows; ++j) {
         ec_system[i][j] = x_pow;
         x_pow = (x_pow * shadows_x[i]) % MOD;
