@@ -1,5 +1,7 @@
 CC := gcc
 CFLAGS := -Wall --pedantic -fsanitize=address -Wextra -std=c11 -O2 -I. -Isrc
+debug: CFLAGS := -Wall --pedantic -fsanitize=address -Wextra -std=c11 -g -O0 -I. -Isrc
+
 
 SRC_DIR := src
 OBJ_DIR = build
@@ -16,6 +18,8 @@ CLANG_TIDY_OPTS = --quiet
 .PHONY: all clean lint
 
 all: $(TARGET)
+
+debug: clean all
 
 $(TARGET): $(OBJS)
 	@mkdir -p $(@D)
