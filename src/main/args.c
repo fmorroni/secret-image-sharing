@@ -11,10 +11,12 @@
 #include <string.h>
 #include <unistd.h>
 
-void printHelp(const char* executable_name);
-uint8_t strToUChar(const char* str, const char* var_name);
-int countBmpFiles(const char* directory);
-void collectBmpFiles(Args* args, int needed_count);
+static void printHelp(const char* executable_name);
+static uint8_t strToUChar(const char* str, const char* var_name);
+static int countBmpFiles(const char* directory);
+static void collectBmpFiles(Args* args, int needed_count);
+__attribute__((noreturn))
+static void printHeaderAndExit(const char* secret_filename);
 
 Args* argsParse(int argc, char* argv[]) {
   const struct option long_options[] = {
@@ -45,15 +47,8 @@ Args* argsParse(int argc, char* argv[]) {
     case 'h':
       printHelp(argv[0]);
       exit(EXIT_SUCCESS);
-    case 'p':;
-      BMP bmp = bmpParse(args->secret_filename);
-      if (bmp == NULL) {
-        fprintf(stderr, "Error parsing bmp\n");
-        exit(EXIT_FAILURE);
-      }
-      bmpPrintHeader(bmp);
-      bmpFree(bmp);
-      exit(EXIT_SUCCESS);
+    case 'p':
+      printHeaderAndExit(args->secret_filename);
     case 'd':
       if (args->recover) {
         fprintf(stderr, "Error: --distribute and --recover are mutually exclusive.\n");
@@ -75,7 +70,11 @@ Args* argsParse(int argc, char* argv[]) {
       min_shadows = strToUChar(optarg, "--min-shadows | -k");
       break;
     case 'n':
-      tot_shadows = strToUChar(optarg, "--tot-shadows | -n");
+      if (args->distribute) tot_shadows = strToUChar(optarg, "--tot-shadows | -n");
+      else {
+        fprintf(stderr, "Error: --distribute and --recover are mutually exclusive.\n");
+        exit(EXIT_FAILURE);
+      }
       break;
     case 'D':
       args->directory = optarg;
@@ -138,7 +137,7 @@ void argsFree(Args* args) {
   free(args);
 }
 
-int countBmpFiles(const char* directory) {
+static int countBmpFiles(const char* directory) {
   DIR* dir = opendir(directory);
   if (dir == NULL) {
     perror("opendir");
@@ -157,7 +156,7 @@ int countBmpFiles(const char* directory) {
   return count;
 }
 
-void collectBmpFiles(Args* args, int needed_count) {
+static void collectBmpFiles(Args* args, int needed_count) {
   DIR* dir = opendir(args->directory);
   if (dir == NULL) {
     perror("opendir");
@@ -188,7 +187,7 @@ void collectBmpFiles(Args* args, int needed_count) {
   closedir(dir);
 }
 
-void printHelp(const char* executable_name) {
+static void printHelp(const char* executable_name) {
   printf("Usage: %s <-r | -d> -s FILE -k NUM [options]\n", executable_name);
   printf("Options:\n");
   printf("  -h, --help               Show this help message and exit\n");
@@ -202,12 +201,12 @@ void printHelp(const char* executable_name) {
     "  -k, --min-shadows NUM    Required: Minimum number of shadow images needed to reconstruct the secret (2 ≤ "
     "NUM ≤ 255)\n"
   );
-  printf("  -n, --tot-shadows NUM    Optional: Total number of shadow images to create\n");
+  printf("  -n, --tot-shadows NUM    Optional: Total number of shadow images to create (only if -d used)\n");
   printf("  -D, --dir DIR            Optional: Directory to read/write shadow images\n");
   printf("                             (default: current working directory)\n");
 }
 
-uint8_t strToUChar(const char* str, const char* var_name) {
+static uint8_t strToUChar(const char* str, const char* var_name) {
   char* endptr;
   errno = 0;
   long val = strtol(str, &endptr, 10);
@@ -226,4 +225,19 @@ uint8_t strToUChar(const char* str, const char* var_name) {
   }
 
   return (uint8_t)val;
+}
+
+static void printHeaderAndExit(const char* secret_filename) {
+  if (secret_filename == NULL) {
+    fprintf(stderr, "Error: pass <-s FILE> before -p \n");
+    exit(EXIT_FAILURE);
+  }
+  BMP bmp = bmpParse(secret_filename);
+  if (bmp == NULL) {
+    fprintf(stderr, "Error parsing bmp\n");
+    exit(EXIT_FAILURE);
+  }
+  bmpPrintHeader(bmp);
+  bmpFree(bmp);
+  exit(EXIT_SUCCESS);
 }
