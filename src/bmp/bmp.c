@@ -126,14 +126,14 @@ BMP bmpParse(const char* filename) {
   }
 
   BMP bmp = malloc(sizeof(BMP_CDT));
-  bmp->colors = NULL;
-  bmp->image = NULL;
-  bmp->extra_data = NULL;
   if (bmp == NULL) {
     perror("malloc");
     fclose(file);
     return NULL;
   }
+  bmp->colors = NULL;
+  bmp->image = NULL;
+  bmp->extra_data = NULL;
 
   if (!parseBaseHeader(file, bmp) || !parseInfoHeader(file, bmp) || !parseColorTable(file, bmp) ||
       !parseExtraData(file, bmp) || !parseImageData(file, bmp)) {
