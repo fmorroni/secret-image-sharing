@@ -88,8 +88,8 @@ void sisShadows(BMP bmp, uint8_t min_shadows, uint8_t tot_shadows, BMP shadows[t
 
   // TODO: handle seed properly...
   uint32_t seed = 0x1234;
-  uint8_t seed_low = seed & 0xFFU;
-  uint8_t seed_high = (seed >> 8U) & 0xFFU;
+  uint8_t seed_low = seed & 0xFFu;
+  uint8_t seed_high = (seed >> 8u) & 0xFFu;
   //
 
   uint32_t shadow_size = ceilDiv(img_size, min_shadows);

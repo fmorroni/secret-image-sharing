@@ -20,6 +20,8 @@ Checks:                       '*,
                                 -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
                                 -readability-magic-numbers,
                                 -readability-isolate-declaration,
+                                -hicpp-uppercase-literal-suffix,
+                                -readability-uppercase-literal-suffix,
                               '
 HeaderFilterRegex:            '.*'
 FormatStyle:                  'file'
