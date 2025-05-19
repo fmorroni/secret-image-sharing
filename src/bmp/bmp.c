@@ -40,7 +40,8 @@ typedef struct BMP_CDT {
   uint32_t horizontal_resolution; //
   uint32_t vertical_resolution;   //
   uint32_t n_colors;              // Number of colors.
-  uint32_t n_important_colors;    // Number of important colors. (???)
+  uint32_t n_important_colors;    // Number of important colors. Indicates that the `n` first elements of the `colors`
+                                  // array are crucial for displaying the image. Can be safely ignored.
   Color* colors;
   uint32_t extra_data_size;
   uint8_t* extra_data;
@@ -73,7 +74,7 @@ BMP bmpNew(
   bmp->extra_data = NULL;
 
   uint32_t image_size = width * height * bpp / BYTE_SIZE;
-  uint32_t extra_data_bytes = extra_data_size == 0 ? 0 : 4 + extra_data_size;
+  uint32_t extra_data_bytes = extra_data_size == 0 ? 0 : sizeof(uint32_t) + extra_data_size;
   uint32_t header_size = BASE_HEADER_SIZE + DEFAULT_INFO_HEADER_SIZE + (sizeof(Color) * n_colors) + extra_data_bytes;
 
   bmp->id[0] = 'B';
@@ -142,10 +143,6 @@ BMP bmpParse(const char* filename) {
     return NULL;
   }
 
-  if (bmp->n_important_colors != 0) {
-    fprintf(stderr, "Number of important colors != 0. Idk what to do, look it up...");
-  }
-
   if (fclose(file) != 0) {
     perror("fclose");
     bmpFree(bmp);
@@ -205,8 +202,30 @@ uint8_t* bmpExtraData(BMP bmp) {
   return bmp->extra_data;
 }
 
+void bmpSetExtraData(BMP bmp, uint32_t extra_data_size, uint8_t* extra_data) {
+  if (extra_data_size > 0 && extra_data != NULL) {
+    bmp->extra_data_size = extra_data_size;
+    bmp->extra_data = malloc(extra_data_size);
+    if (bmp->extra_data == NULL) {
+      perror("malloc extra data");
+      exit(EXIT_FAILURE);
+    }
+    memcpy(bmp->extra_data, extra_data, extra_data_size);
+    uint32_t extra_data_bytes = sizeof(uint32_t) + extra_data_size;
+    bmp->filesize += extra_data_bytes;
+    bmp->offset += extra_data_bytes;
+  } else {
+    bmp->extra_data_size = 0;
+    bmp->extra_data = NULL;
+  }
+}
+
 uint8_t* bmpReserved(BMP bmp) {
   return bmp->reserved;
+}
+
+void bmpSetReserved(BMP bmp, uint8_t reserved[4]) {
+  memcpy(bmp->reserved, reserved, 4);
 }
 
 int bmpWriteFile(const char* filename, BMP bmp) {
@@ -231,7 +250,7 @@ int bmpWriteFile(const char* filename, BMP bmp) {
   }
 
   if (bmp->extra_data_size > 0) {
-    written = fwrite(&bmp->extra_data_size, 4, 1, file);
+    written = fwrite(&bmp->extra_data_size, sizeof(uint32_t), 1, file);
     if (written != 1) BMP_WRITE_CLEANUP("fwrite", file);
     written = fwrite(bmp->extra_data, bmp->extra_data_size, 1, file);
     if (written != 1) BMP_WRITE_CLEANUP("fwrite", file);
@@ -318,9 +337,13 @@ static bool parseColorTable(FILE* file, BMP bmp) {
   if (bmp->n_colors == 0) {
     bmp->colors = NULL;
     return true;
+  } else if (bmp->n_colors > 10000) {
+    fprintf(stderr, "Too many colors (%u), probably an error.\n", bmp->n_colors);
+    return false;
   }
 
   size_t color_bytes = bmp->n_colors * sizeof(Color);
+
   bmp->colors = malloc(color_bytes);
   if (!bmp->colors) {
     perror("malloc colors");
@@ -340,6 +363,13 @@ static bool parseExtraData(FILE* file, BMP bmp) {
   if (!freadWithPerror(file, &bmp->extra_data_size, sizeof(uint32_t), "fread extra size")) return false;
 
   if (bmp->extra_data_size == 0) {
+    bmp->extra_data = NULL;
+    return true;
+  } else if (bmp->extra_data_size > 100) {
+    fprintf(
+      stderr, "Extra data size too large (%u B), probably an error. Ignoring extra data.\n", bmp->extra_data_size
+    );
+    bmp->extra_data_size = 0;
     bmp->extra_data = NULL;
     return true;
   }

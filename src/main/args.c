@@ -15,8 +15,7 @@ static void printHelp(const char* executable_name);
 static uint8_t strToUChar(const char* str, const char* var_name);
 static int countBmpFiles(const char* directory);
 static void collectBmpFiles(Args* args, int needed_count);
-__attribute__((noreturn))
-static void printHeaderAndExit(const char* secret_filename);
+__attribute__((noreturn)) static void printHeaderAndExit(const char* secret_filename);
 
 Args* argsParse(int argc, char* argv[]) {
   const struct option long_options[] = {
@@ -39,7 +38,7 @@ Args* argsParse(int argc, char* argv[]) {
   int32_t tot_shadows = -1;
   args->directory = NULL;
   args->_directory_allocated = NULL;
-  args->parsed_bmps = 0;
+  args->_parsed_bmps = 0;
 
   int opt;
   while ((opt = getopt_long(argc, argv, "hpdrs:k:n:D:", long_options, NULL)) != -1) {
@@ -111,11 +110,18 @@ Args* argsParse(int argc, char* argv[]) {
     args->directory = args->_directory_allocated;
   }
 
-  if (tot_shadows < 0) args->tot_shadows = countBmpFiles(args->directory);
-  else args->tot_shadows = tot_shadows;
+  int bmps_in_dir = countBmpFiles(args->directory);
+  if (tot_shadows < 0) args->tot_shadows = bmps_in_dir;
+  else if (bmps_in_dir < tot_shadows) {
+    fprintf(
+      stderr, "Error: Not enough base images. Want %u shadows but found only %u base images.\n", tot_shadows,
+      bmps_in_dir
+    );
+    exit(EXIT_FAILURE);
+  } else args->tot_shadows = tot_shadows;
 
   if (args->tot_shadows < args->min_shadows) {
-    fprintf(stderr, "Error: Not enough shadows (k: %d, n: %d) .\n", args->min_shadows, args->tot_shadows);
+    fprintf(stderr, "Error: Not enough shadows (k: %u, n: %u) .\n", args->min_shadows, args->tot_shadows);
     exit(EXIT_FAILURE);
   }
 
@@ -132,7 +138,7 @@ Args* argsParse(int argc, char* argv[]) {
 void argsFree(Args* args) {
   // `free(NULL)` is a no-op so it's fine to have no check.
   free(args->_directory_allocated);
-  for (int i = 0; i < args->parsed_bmps; ++i) bmpFree(args->dir_bmps[i]);
+  for (int i = 0; i < args->_parsed_bmps; ++i) bmpFree(args->dir_bmps[i]);
   free((void*)args->dir_bmps);
   free(args);
 }
@@ -180,7 +186,7 @@ static void collectBmpFiles(Args* args, int needed_count) {
         argsFree(args);
         exit(EXIT_FAILURE);
       }
-      args->parsed_bmps = ++count;
+      args->_parsed_bmps = ++count;
     }
   }
 

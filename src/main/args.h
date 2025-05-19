@@ -13,7 +13,7 @@ typedef struct Args {
   uint8_t tot_shadows;
   const char* directory;
   char* _directory_allocated;
-  uint8_t parsed_bmps;
+  uint8_t _parsed_bmps;
   BMP* dir_bmps;
 } Args;
 
