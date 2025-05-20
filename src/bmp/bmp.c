@@ -1,4 +1,5 @@
 #include "bmp.h"
+#include "../utils/utils.h"
 #include <errno.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -42,7 +43,9 @@ typedef struct BMP_CDT {
   uint32_t n_colors;              // Number of colors.
   uint32_t n_important_colors;    // Number of important colors. Indicates that the `n` first elements of the `colors`
                                   // array are crucial for displaying the image. Can be safely ignored.
-  Color* colors;
+  Color* colors;                  //
+  char extra_data_label[5];       // Characters "EXTRA" to identify that it is in fact extra data and not
+                                  // just garbage in between the header and the image.
   uint32_t extra_data_size;
   uint8_t* extra_data;
   uint8_t* image;
@@ -55,6 +58,9 @@ static bool parseInfoHeader(FILE* file, BMP bmp);
 static bool parseColorTable(FILE* file, BMP bmp);
 static bool parseExtraData(FILE* file, BMP bmp);
 static bool parseImageData(FILE* file, BMP bmp);
+
+#define EXTRA_LBL_LEN 5
+static const char extra_label[EXTRA_LBL_LEN] = {'E', 'X', 'T', 'R', 'A'};
 
 BMP bmpNew(
   uint32_t width, uint32_t height, uint16_t bpp, uint8_t reserved[4], uint32_t n_colors, Color colors[n_colors],
@@ -74,7 +80,7 @@ BMP bmpNew(
   bmp->extra_data = NULL;
 
   uint32_t image_size = width * height * bpp / BYTE_SIZE;
-  uint32_t extra_data_bytes = extra_data_size == 0 ? 0 : sizeof(uint32_t) + extra_data_size;
+  uint32_t extra_data_bytes = extra_data_size == 0 ? 0 : EXTRA_LBL_LEN + sizeof(uint32_t) + extra_data_size;
   uint32_t header_size = BASE_HEADER_SIZE + DEFAULT_INFO_HEADER_SIZE + (sizeof(Color) * n_colors) + extra_data_bytes;
 
   bmp->id[0] = 'B';
@@ -104,6 +110,7 @@ BMP bmpNew(
     bmp->colors = NULL;
   }
   if (extra_data_size > 0 && extra_data != NULL) {
+    memcpy(bmp->extra_data_label, extra_label, EXTRA_LBL_LEN);
     bmp->extra_data_size = extra_data_size;
     bmp->extra_data = malloc(extra_data_size);
     if (bmp->extra_data == NULL) BMP_SIMPLE_CLEANUP("malloc", bmp);
@@ -204,6 +211,7 @@ uint8_t* bmpExtraData(BMP bmp) {
 
 void bmpSetExtraData(BMP bmp, uint32_t extra_data_size, uint8_t* extra_data) {
   if (extra_data_size > 0 && extra_data != NULL) {
+    memcpy(bmp->extra_data_label, extra_label, EXTRA_LBL_LEN);
     bmp->extra_data_size = extra_data_size;
     bmp->extra_data = malloc(extra_data_size);
     if (bmp->extra_data == NULL) {
@@ -211,7 +219,7 @@ void bmpSetExtraData(BMP bmp, uint32_t extra_data_size, uint8_t* extra_data) {
       exit(EXIT_FAILURE);
     }
     memcpy(bmp->extra_data, extra_data, extra_data_size);
-    uint32_t extra_data_bytes = sizeof(uint32_t) + extra_data_size;
+    uint32_t extra_data_bytes = EXTRA_LBL_LEN + sizeof(uint32_t) + extra_data_size;
     bmp->filesize += extra_data_bytes;
     bmp->offset += extra_data_bytes;
   } else {
@@ -250,10 +258,12 @@ int bmpWriteFile(const char* filename, BMP bmp) {
   }
 
   if (bmp->extra_data_size > 0) {
+    written = fwrite(&bmp->extra_data_label, EXTRA_LBL_LEN, 1, file);
+    if (written != 1) BMP_WRITE_CLEANUP("fwrite extra data label", file);
     written = fwrite(&bmp->extra_data_size, sizeof(uint32_t), 1, file);
-    if (written != 1) BMP_WRITE_CLEANUP("fwrite", file);
+    if (written != 1) BMP_WRITE_CLEANUP("fwrite extra data size", file);
     written = fwrite(bmp->extra_data, bmp->extra_data_size, 1, file);
-    if (written != 1) BMP_WRITE_CLEANUP("fwrite", file);
+    if (written != 1) BMP_WRITE_CLEANUP("fwrite extra data", file);
   }
 
   if (fseek(file, bmp->offset, SEEK_SET) != 0) BMP_WRITE_CLEANUP("fseek", file);
@@ -328,9 +338,39 @@ static bool parseBaseHeader(FILE* file, BMP bmp) {
 
 static bool parseInfoHeader(FILE* file, BMP bmp) {
   if (!freadWithPerror(file, &bmp->info_header_size, sizeof(uint32_t), "fread info_size")) return false;
-  return freadWithPerror(
-    file, ((uint8_t*)&bmp->info_header_size) + sizeof(uint32_t), bmp->info_header_size - sizeof(uint32_t), "fread info"
-  );
+  if (bmp->info_header_size > DEFAULT_INFO_HEADER_SIZE) {
+    // fprintf(stderr, "Error: info_header_size != %d. Can't parse.\n", DEFAULT_INFO_HEADER_SIZE);
+    // return false;
+    fprintf(
+      stderr, "Warning: info_header_size != %d. Can't parse. Defaulting to size %d.\n", DEFAULT_INFO_HEADER_SIZE,
+      DEFAULT_INFO_HEADER_SIZE
+    );
+    bmp->info_header_size = DEFAULT_INFO_HEADER_SIZE;
+    // For now I'll just leave the offset as is and leave an empty chunk in the file.
+    // uint32_t diff = bmp->info_header_size - DEFAULT_INFO_HEADER_SIZE;
+    // bmp->filesize -= diff;
+    // // WARNING This is (probably) a mistake. If I change the offset here then when reading the image it will
+    // // read from an incorrect offset.
+    // bmp->offset -= diff;
+  }
+  if (!freadWithPerror(
+        file, ((uint8_t*)&bmp->info_header_size) + sizeof(uint32_t), bmp->info_header_size - sizeof(uint32_t),
+        "fread info"
+      )) {
+    return false;
+  } else {
+    // BMP rows must be padded to be multiple of 4 bytes.
+    // The `+3 & ~3` is to get closest rounded up multiple of 4
+    uint32_t should_be_size = bmp->height * ((ceilDiv(bmp->width * bmp->bpp, BYTE_SIZE) + 3) & ~3u);
+    if (bmp->image_size != should_be_size) {
+      fprintf(
+        stderr, "Warning: Incorrect image_size found. Expected %u, found %u. Using correct value.\n", should_be_size,
+        bmp->image_size
+      );
+      bmp->image_size = should_be_size;
+    }
+    return true;
+  }
 }
 
 static bool parseColorTable(FILE* file, BMP bmp) {
@@ -360,8 +400,16 @@ static bool parseExtraData(FILE* file, BMP bmp) {
     return true;
   }
 
-  if (!freadWithPerror(file, &bmp->extra_data_size, sizeof(uint32_t), "fread extra size")) return false;
+  if (!freadWithPerror(file, &bmp->extra_data_label, EXTRA_LBL_LEN, "fread extra data label")) return false;
+  for (int i = 0; i < EXTRA_LBL_LEN; ++i) {
+    if (bmp->extra_data_label[i] != extra_label[i]) {
+      bmp->extra_data_size = 0;
+      bmp->extra_data = NULL;
+      return true;
+    }
+  }
 
+  if (!freadWithPerror(file, &bmp->extra_data_size, sizeof(uint32_t), "fread extra data size")) return false;
   if (bmp->extra_data_size == 0) {
     bmp->extra_data = NULL;
     return true;
@@ -380,7 +428,7 @@ static bool parseExtraData(FILE* file, BMP bmp) {
     return false;
   }
 
-  return freadWithPerror(file, bmp->extra_data, bmp->extra_data_size, "fread extra");
+  return freadWithPerror(file, bmp->extra_data, bmp->extra_data_size, "fread extra data");
 }
 
 static bool parseImageData(FILE* file, BMP bmp) {
@@ -395,7 +443,10 @@ static bool parseImageData(FILE* file, BMP bmp) {
     return false;
   }
 
-  if (fread(bmp->image, 1, bmp->image_size, file) != bmp->image_size) {
+  size_t read = fread(bmp->image, 1, bmp->image_size, file);
+  if (read != bmp->image_size) {
+    // TODO: remove
+    printf("read: %lu, img_size: %u\n", read, bmp->image_size);
     perror("fread image");
     return false;
   }
