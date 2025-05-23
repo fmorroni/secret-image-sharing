@@ -50,7 +50,7 @@ Args* argsParse(int argc, char* argv[]) {
   if (args->tot_shadows == 0) args->tot_shadows = bmps_in_dir;
   else if (bmps_in_dir < args->tot_shadows) {
     fprintf(
-      stderr, "Error: Not enough base images. Want %u shadows but found only %u base images.\n", tot_shadows,
+      stderr, "Error: Not enough carrier images. Want %u shadows but found only %u carrier images.\n", args->tot_shadows,
       bmps_in_dir
     );
     exit(EXIT_FAILURE);

@@ -13,28 +13,25 @@ void calculateShadowPixel(
   uint8_t min_shadows, uint8_t coefficients[min_shadows], uint8_t tot_shadows, uint32_t pixels[tot_shadows]
 );
 void hideShadowPixels(
-  uint32_t shadow_pixel_idx, uint8_t* coefficients, uint8_t min_shadows, uint8_t tot_shadows, BMP base_bmps[tot_shadows]
+  uint32_t shadow_pixel_idx, uint8_t* coefficients, uint8_t min_shadows, uint8_t tot_shadows, BMP carrier_bmps[tot_shadows]
 );
 void stegHidePixel(uint32_t shadow_pixel_idx, uint8_t* img, uint8_t hide_pixel);
 uint8_t stegRecoverPixel(uint32_t shadow_pixel_idx, uint8_t* img);
 
-void sisShadows(BMP bmp, uint8_t min_shadows, uint8_t tot_shadows, BMP base_bmps[tot_shadows]) {
+void sisShadows(BMP bmp, uint8_t min_shadows, uint8_t tot_shadows, BMP carrier_bmps[tot_shadows]) {
   assert(min_shadows >= 2 && tot_shadows >= min_shadows);
   const uint8_t* img = bmpImage(bmp);
   uint32_t img_size = bmpImageSize(bmp);
   uint32_t shadow_size = ceilDiv(img_size, min_shadows);
 
   for (int i = 0; i < tot_shadows; ++i) {
-    // bmpPrintHeader(base_bmps[i]);
-    // puts("----------");
-    uint32_t base_size = bmpImageSize(base_bmps[i]);
-    printf("base_size: %u, 8xShadow_size: %u\n", base_size, 8 * shadow_size);
-    if (base_size < 8 * shadow_size) {
+    uint32_t carrier_size = bmpImageSize(carrier_bmps[i]);
+    if (carrier_size < 8 * shadow_size) {
       fprintf(
         stderr,
-        "sisShadows: Base image size must be at least 8x bigger than shadow size in order to hide the shadows "
-        "(base_size %u < 8 x shadow_size %u)",
-        base_size, 8 * shadow_size
+        "sisShadows: Carrier image size must be at least 8x bigger than shadow size in order to hide the shadows "
+        "(carrier_size %u < 8 x shadow_size %u)",
+        carrier_size, 8 * shadow_size
       );
       exit(EXIT_FAILURE);
     }
@@ -52,9 +49,9 @@ void sisShadows(BMP bmp, uint8_t min_shadows, uint8_t tot_shadows, BMP base_bmps
   // TODO: I'll also need to save color info in extra_data because it's not uncommon to have a reduced pallet.
   // For example 1 bpp and just 2 colors.
   for (uint8_t i = 0; i < tot_shadows; ++i) {
-    bmpSetReserved(base_bmps[i], (uint8_t[]){seed_low, seed_high, i + 1, 0});
+    bmpSetReserved(carrier_bmps[i], (uint8_t[]){seed_low, seed_high, i + 1, 0});
     bmpSetExtraData(
-      base_bmps[i], sizeof(uint32_t) * 3, (uint8_t*)(uint32_t[]){bmpWidth(bmp), bmpHeight(bmp), bmpBpp(bmp)}
+      carrier_bmps[i], sizeof(uint32_t) * 3, (uint8_t*)(uint32_t[]){bmpWidth(bmp), bmpHeight(bmp), bmpBpp(bmp)}
     );
   }
 
@@ -62,7 +59,7 @@ void sisShadows(BMP bmp, uint8_t min_shadows, uint8_t tot_shadows, BMP base_bmps
   uint32_t i;
   for (i = 0; i < img_size / min_shadows; ++i) {
     for (int j = 0; j < min_shadows; ++j) coefficients[j] = img[(i * min_shadows) + j];
-    hideShadowPixels(i, coefficients, min_shadows, tot_shadows, base_bmps);
+    hideShadowPixels(i, coefficients, min_shadows, tot_shadows, carrier_bmps);
   }
 
   // If img_size not multiple of r then use last img_size%r pixels, pad with
@@ -71,7 +68,7 @@ void sisShadows(BMP bmp, uint8_t min_shadows, uint8_t tot_shadows, BMP base_bmps
     int j;
     for (i = i * min_shadows, j = 0; i < img_size; ++i, ++j) coefficients[j] = img[i];
     while (j < min_shadows) coefficients[j++] = 0;
-    hideShadowPixels(shadow_size - 1, coefficients, min_shadows, tot_shadows, base_bmps);
+    hideShadowPixels(shadow_size - 1, coefficients, min_shadows, tot_shadows, carrier_bmps);
   }
 }
 
@@ -190,13 +187,13 @@ void calculateShadowPixel(
 }
 
 void hideShadowPixels(
-  uint32_t shadow_pixel_idx, uint8_t* coefficients, uint8_t min_shadows, uint8_t tot_shadows, BMP base_bmps[tot_shadows]
+  uint32_t shadow_pixel_idx, uint8_t* coefficients, uint8_t min_shadows, uint8_t tot_shadows, BMP carrier_bmps[tot_shadows]
 ) {
   uint32_t pixels[tot_shadows];
   calculateShadowPixel(min_shadows, coefficients, tot_shadows, pixels);
   for (int j = 0; j < tot_shadows; ++j) {
     uint8_t hide_pixel = pixels[j];
-    stegHidePixel(shadow_pixel_idx, bmpImage(base_bmps[j]), hide_pixel);
+    stegHidePixel(shadow_pixel_idx, bmpImage(carrier_bmps[j]), hide_pixel);
   }
 }
 
