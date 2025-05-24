@@ -15,6 +15,7 @@ typedef struct Args {
   char* _directory_allocated;
   uint8_t _parsed_bmps;
   BMP* dir_bmps;
+  uint16_t seed;
 } Args;
 
 Args* argsParse(int argc, char* argv[]);

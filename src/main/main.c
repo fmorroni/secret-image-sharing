@@ -11,12 +11,12 @@ int main(int argc, char* argv[]) {
   Args* args = argsParse(argc, argv);
   if (args->distribute) {
     BMP bmp = bmpParse(args->secret_filename);
+    printf("parsing secret: `%s`...\n", args->secret_filename);
     if (bmp == NULL) {
       fprintf(stderr, "Error parsing bmp `%s`", args->secret_filename);
       exit(EXIT_FAILURE);
     }
-    // bmpPrintHeader(bmp);
-    sisShadows(bmp, args->min_shadows, args->tot_shadows, args->dir_bmps);
+    sisShadows(bmp, args->min_shadows, args->tot_shadows, args->dir_bmps, args->seed);
     for (int i = 0; i < args->tot_shadows; ++i) {
       char full_path[4096];
       snprintf(full_path, 4096, "%s/shadow-%03d.bmp", args->directory, i);
@@ -26,7 +26,7 @@ int main(int argc, char* argv[]) {
     bmpFree(bmp);
   } else {
     printf("min_shadows: %d, parsed_shadows: %d\n", args->min_shadows, args->_parsed_bmps);
-    BMP secret = sisRecover(args->min_shadows, args->dir_bmps);
+    BMP secret = sisRecover(args->min_shadows, args->dir_bmps, args->seed);
     bmpPrintHeader(secret);
     bmpWriteFile(args->secret_filename, secret);
     bmpFree(secret);

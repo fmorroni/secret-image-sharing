@@ -2,6 +2,7 @@
 #include "../bmp/bmp.h"
 #include "../globals.h"
 #include "../utils/utils.h"
+#include "permutation.h"
 #include <assert.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -18,7 +19,7 @@ void hideShadowPixels(
 void stegHidePixel(uint32_t shadow_pixel_idx, uint8_t* img, uint8_t hide_pixel);
 uint8_t stegRecoverPixel(uint32_t shadow_pixel_idx, uint8_t* img);
 
-void sisShadows(BMP bmp, uint8_t min_shadows, uint8_t tot_shadows, BMP carrier_bmps[tot_shadows]) {
+void sisShadows(BMP bmp, uint8_t min_shadows, uint8_t tot_shadows, BMP carrier_bmps[tot_shadows], uint16_t seed) {
   assert(min_shadows >= 2 && tot_shadows >= min_shadows);
   const uint8_t* img = bmpImage(bmp);
   uint32_t img_size = bmpImageSize(bmp);
@@ -37,14 +38,13 @@ void sisShadows(BMP bmp, uint8_t min_shadows, uint8_t tot_shadows, BMP carrier_b
     }
   }
 
-  // TODO: handle seed properly...
-  uint32_t seed = 0x1234;
-  uint8_t seed_low = seed & 0xFFu;
-  uint8_t seed_high = (seed >> 8u) & 0xFFu;
-  //
+  setSeed(seed);
+  uint8_t permMat[img_size];
+  permutationMatrix(img_size, permMat);
+  xorMatrixes(img_size, permMat, img);
 
-  // uint32_t shadow_rows, shadow_cols;
-  // closestDivisors(shadow_size, &shadow_rows, &shadow_cols);
+  uint8_t seed_low = seed & 0xFFu;
+  uint8_t seed_high = ((uint32_t)seed >> 8u) & 0xFFu;
 
   // TODO: I'll also need to save color info in extra_data because it's not uncommon to have a reduced pallet.
   // For example 1 bpp and just 2 colors.
@@ -58,7 +58,7 @@ void sisShadows(BMP bmp, uint8_t min_shadows, uint8_t tot_shadows, BMP carrier_b
   uint8_t coefficients[min_shadows];
   uint32_t i;
   for (i = 0; i < img_size / min_shadows; ++i) {
-    for (int j = 0; j < min_shadows; ++j) coefficients[j] = img[(i * min_shadows) + j];
+    for (int j = 0; j < min_shadows; ++j) coefficients[j] = permMat[(i * min_shadows) + j];
     hideShadowPixels(i, coefficients, min_shadows, tot_shadows, carrier_bmps);
   }
 
@@ -66,13 +66,14 @@ void sisShadows(BMP bmp, uint8_t min_shadows, uint8_t tot_shadows, BMP carrier_b
   // zeros and calculate a new shadow pixel.
   if (img_size % min_shadows != 0) {
     int j;
-    for (i = i * min_shadows, j = 0; i < img_size; ++i, ++j) coefficients[j] = img[i];
+    for (i = i * min_shadows, j = 0; i < img_size; ++i, ++j) coefficients[j] = permMat[i];
     while (j < min_shadows) coefficients[j++] = 0;
     hideShadowPixels(shadow_size - 1, coefficients, min_shadows, tot_shadows, carrier_bmps);
   }
 }
 
-BMP sisRecover(uint8_t min_shadows, BMP shadows[min_shadows]) {
+BMP sisRecover(uint8_t min_shadows, BMP shadows[min_shadows], uint16_t seed) {
+  assert(min_shadows >= 2);
   uint32_t extra_data_size = bmpExtraSize(shadows[0]);
   if (extra_data_size < 3 * sizeof(uint32_t)) {
     fprintf(stderr, "Incorrect shadow format. Missing secret image info.\n");
@@ -94,7 +95,7 @@ BMP sisRecover(uint8_t min_shadows, BMP shadows[min_shadows]) {
     reserved = (uint16_t*)bmpReserved(shadows[i]);
     shadows_x[i] = reserved[1];
   }
-  // uint16_t seed = reserved[0];
+  if (seed == 0) seed = reserved[0];
 
   uint32_t* secret_info = (uint32_t*)bmpExtraData(shadows[0]);
   uint32_t secret_width = secret_info[0];
@@ -103,6 +104,7 @@ BMP sisRecover(uint8_t min_shadows, BMP shadows[min_shadows]) {
   uint32_t n_colors = secret_bpp > 8 ? 0 : 256;
   // TODO: use colors from extra_data.
   BMP secret = bmpNew(secret_width, secret_height, secret_bpp, NULL, n_colors, n_colors == 0 ? NULL : colors, 0, NULL);
+  if (!secret) exit(EXIT_FAILURE);
   uint8_t* img = bmpImage(secret);
   uint32_t img_size = bmpImageSize(secret);
   uint32_t shadow_size = ceilDiv(img_size, min_shadows);
@@ -129,6 +131,11 @@ BMP sisRecover(uint8_t min_shadows, BMP shadows[min_shadows]) {
       img[img_idx] = coefs[i];
     }
   }
+
+  setSeed(seed);
+  uint8_t permMat[img_size];
+  permutationMatrix(img_size, permMat);
+  xorMatrixes(img_size, img, permMat);
 
   return secret;
 }

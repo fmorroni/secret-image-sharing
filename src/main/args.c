@@ -13,9 +13,12 @@
 
 static void printHelp(const char* executable_name);
 static uint8_t strToUInt8(const char* str, const char* var_name);
+static uint16_t strToUInt16(const char* str, const char* var_name);
 static int countBmpFiles(const char* directory);
 static void collectBmpFiles(Args* args, int needed_count);
 static void printHeader(const char* secret_filename);
+Args* initArgs();
+void parseOptions(Args* args, int argc, char* argv[]);
 
 Args* argsParse(int argc, char* argv[]) {
   Args* args = initArgs();
@@ -86,6 +89,7 @@ Args* initArgs() {
   args->_directory_allocated = NULL;
   args->_parsed_bmps = 0;
   args->dir_bmps = NULL;
+  args->seed = 0;
   return args;
 }
 
@@ -99,11 +103,12 @@ void parseOptions(Args* args, int argc, char* argv[]) {
     {"min-shadows", required_argument, NULL, 'k'},
     {"tot-shadows", required_argument, NULL, 'n'},
     {"dir", required_argument, NULL, 'D'},
+    {"seed", required_argument, NULL, 'S'},
     {0, 0, 0, 0}
   };
 
   int opt;
-  while ((opt = getopt_long(argc, argv, "hpdrs:k:n:D:", long_options, NULL)) != -1) {
+  while ((opt = getopt_long(argc, argv, "hpdrs:k:n:D:S:", long_options, NULL)) != -1) {
     switch (opt) {
     case 'h':
       printHelp(argv[0]);
@@ -136,6 +141,9 @@ void parseOptions(Args* args, int argc, char* argv[]) {
       break;
     case 'D':
       args->directory = optarg;
+      break;
+    case 'S':
+      args->seed = strToUInt16(optarg, "--seed | -S");
       break;
     default:
       fprintf(stderr, "Try '%s --help' for usage.\n", argv[0]);
@@ -219,6 +227,8 @@ static void printHelp(const char* executable_name) {
   printf("  -n, --tot-shadows NUM    Optional: Total number of shadow images to create (only if -d used)\n");
   printf("  -D, --dir DIR            Optional: Directory to read/write shadow images\n");
   printf("                             (default: current working directory)\n");
+  printf("  -S, --seed NUM           Optional: Seed to use for permutation matrix.\n");
+  printf("                             (default: 0 if -d used, `seed` from reserved bytes in shadow if -r used)\n");
 }
 
 static uint32_t strToNumInRange(const char* str, uint32_t min, uint32_t max, const char* var_name) {
@@ -245,6 +255,9 @@ static uint32_t strToNumInRange(const char* str, uint32_t min, uint32_t max, con
 static uint8_t strToUInt8(const char* str, const char* var_name) {
   return (uint8_t)strToNumInRange(str, 0, UINT8_MAX, var_name);
 }
+
+static uint16_t strToUInt16(const char* str, const char* var_name) {
+  return (uint16_t)strToNumInRange(str, 0, UINT16_MAX, var_name);
 }
 
 static void printHeader(const char* secret_filename) {
@@ -258,6 +271,6 @@ static void printHeader(const char* secret_filename) {
     exit(EXIT_FAILURE);
   }
   bmpPrintHeader(bmp);
+  // bmpWriteFile("./asdf-test.bmp", bmp);
   bmpFree(bmp);
-  exit(EXIT_SUCCESS);
 }
