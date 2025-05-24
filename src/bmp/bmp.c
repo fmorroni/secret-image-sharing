@@ -66,11 +66,6 @@ BMP bmpNew(
   uint32_t width, uint32_t height, uint16_t bpp, uint8_t reserved[4], uint32_t n_colors, Color colors[n_colors],
   uint32_t extra_data_size, uint8_t extra_data[extra_data_size]
 ) {
-  if (bpp % BYTE_SIZE != 0) {
-    errno = EINVAL;
-    return NULL;
-  }
-
   BMP bmp = malloc(sizeof(BMP_CDT));
   if (bmp == NULL) {
     perror("malloc");
@@ -79,7 +74,7 @@ BMP bmpNew(
   bmp->image = NULL;
   bmp->extra_data = NULL;
 
-  uint32_t image_size = width * height * bpp / BYTE_SIZE;
+  uint32_t image_size = height * ((ceilDiv(width * bpp, BYTE_SIZE) + 3) & ~3u);
   uint32_t extra_data_bytes = extra_data_size == 0 ? 0 : EXTRA_LBL_LEN + sizeof(uint32_t) + extra_data_size;
   uint32_t header_size = BASE_HEADER_SIZE + DEFAULT_INFO_HEADER_SIZE + (sizeof(Color) * n_colors) + extra_data_bytes;
 
