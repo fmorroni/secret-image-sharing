@@ -408,15 +408,7 @@ static bool parseExtraData(FILE* file, BMP bmp) {
   if (bmp->extra_data_size == 0) {
     bmp->extra_data = NULL;
     return true;
-  } else if (bmp->extra_data_size > 100) {
-    fprintf(
-      stderr, "Extra data size too large (%u B), probably an error. Ignoring extra data.\n", bmp->extra_data_size
-    );
-    bmp->extra_data_size = 0;
-    bmp->extra_data = NULL;
-    return true;
   }
-
   bmp->extra_data = malloc(bmp->extra_data_size);
   if (!bmp->extra_data) {
     perror("malloc extra data");
