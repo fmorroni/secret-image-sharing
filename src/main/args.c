@@ -271,6 +271,5 @@ static void printHeader(const char* secret_filename) {
     exit(EXIT_FAILURE);
   }
   bmpPrintHeader(bmp);
-  // bmpWriteFile("./asdf-test.bmp", bmp);
   bmpFree(bmp);
 }

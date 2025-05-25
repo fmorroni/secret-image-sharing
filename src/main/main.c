@@ -27,7 +27,6 @@ int main(int argc, char* argv[]) {
   } else {
     printf("min_shadows: %d, parsed_shadows: %d\n", args->min_shadows, args->_parsed_bmps);
     BMP secret = sisRecover(args->min_shadows, args->dir_bmps, args->seed);
-    bmpPrintHeader(secret);
     bmpWriteFile(args->secret_filename, secret);
     bmpFree(secret);
   }

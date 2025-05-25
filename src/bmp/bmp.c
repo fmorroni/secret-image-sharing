@@ -432,8 +432,6 @@ static bool parseImageData(FILE* file, BMP bmp) {
 
   size_t read = fread(bmp->image, 1, bmp->image_size, file);
   if (read != bmp->image_size) {
-    // TODO: remove
-    printf("read: %lu, img_size: %u\n", read, bmp->image_size);
     perror("fread image");
     return false;
   }
