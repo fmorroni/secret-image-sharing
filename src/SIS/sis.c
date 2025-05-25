@@ -9,15 +9,27 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
+typedef struct {
+  uint32_t width;
+  uint32_t height;
+  uint32_t bpp;
+  uint32_t n_colors;
+  Color colors[];
+} ExtraData;
 
 void calculateShadowPixel(
   uint8_t min_shadows, uint8_t coefficients[min_shadows], uint8_t tot_shadows, uint32_t pixels[tot_shadows]
 );
 void hideShadowPixels(
-  uint32_t shadow_pixel_idx, uint8_t* coefficients, uint8_t min_shadows, uint8_t tot_shadows, BMP carrier_bmps[tot_shadows]
+  uint32_t shadow_pixel_idx, uint8_t* coefficients, uint8_t min_shadows, uint8_t tot_shadows,
+  BMP carrier_bmps[tot_shadows]
 );
 void stegHidePixel(uint32_t shadow_pixel_idx, uint8_t* img, uint8_t hide_pixel);
 uint8_t stegRecoverPixel(uint32_t shadow_pixel_idx, uint8_t* img);
+void writeExtraData(BMP bmp, uint8_t* extra_data);
+void readExtraData(uint8_t* extra_data_raw, ExtraData** extra_data);
 
 void sisShadows(BMP bmp, uint8_t min_shadows, uint8_t tot_shadows, BMP carrier_bmps[tot_shadows], uint16_t seed) {
   assert(min_shadows >= 2 && tot_shadows >= min_shadows);
@@ -46,13 +58,13 @@ void sisShadows(BMP bmp, uint8_t min_shadows, uint8_t tot_shadows, BMP carrier_b
   uint8_t seed_low = seed & 0xFFu;
   uint8_t seed_high = ((uint32_t)seed >> 8u) & 0xFFu;
 
-  // TODO: I'll also need to save color info in extra_data because it's not uncommon to have a reduced pallet.
-  // For example 1 bpp and just 2 colors.
+  uint32_t extra_data_size = (4 * sizeof(uint32_t)) + (bmpNColors(bmp) * sizeof(Color));
+  uint8_t extra_data[extra_data_size];
+  writeExtraData(bmp, extra_data);
+
   for (uint8_t i = 0; i < tot_shadows; ++i) {
     bmpSetReserved(carrier_bmps[i], (uint8_t[]){seed_low, seed_high, i + 1, 0});
-    bmpSetExtraData(
-      carrier_bmps[i], sizeof(uint32_t) * 3, (uint8_t*)(uint32_t[]){bmpWidth(bmp), bmpHeight(bmp), bmpBpp(bmp)}
-    );
+    bmpSetExtraData(carrier_bmps[i], extra_data_size, extra_data);
   }
 
   uint8_t coefficients[min_shadows];
@@ -97,13 +109,12 @@ BMP sisRecover(uint8_t min_shadows, BMP shadows[min_shadows], uint16_t seed) {
   }
   if (seed == 0) seed = reserved[0];
 
-  uint32_t* secret_info = (uint32_t*)bmpExtraData(shadows[0]);
-  uint32_t secret_width = secret_info[0];
-  uint32_t secret_height = secret_info[1];
-  uint32_t secret_bpp = secret_info[2];
-  uint32_t n_colors = secret_bpp > 8 ? 0 : 256;
-  // TODO: use colors from extra_data.
-  BMP secret = bmpNew(secret_width, secret_height, secret_bpp, NULL, n_colors, n_colors == 0 ? NULL : colors, 0, NULL);
+  // uint8_t* secret_info = bmpExtraData(shadows[0]);
+  ExtraData* secret_info;
+  readExtraData(bmpExtraData(shadows[0]), &secret_info);
+  BMP secret = bmpNew(
+    secret_info->width, secret_info->height, secret_info->bpp, NULL, secret_info->n_colors, secret_info->colors, 0, NULL
+  );
   if (!secret) exit(EXIT_FAILURE);
   uint8_t* img = bmpImage(secret);
   uint32_t img_size = bmpImageSize(secret);
@@ -194,7 +205,8 @@ void calculateShadowPixel(
 }
 
 void hideShadowPixels(
-  uint32_t shadow_pixel_idx, uint8_t* coefficients, uint8_t min_shadows, uint8_t tot_shadows, BMP carrier_bmps[tot_shadows]
+  uint32_t shadow_pixel_idx, uint8_t* coefficients, uint8_t min_shadows, uint8_t tot_shadows,
+  BMP carrier_bmps[tot_shadows]
 ) {
   uint32_t pixels[tot_shadows];
   calculateShadowPixel(min_shadows, coefficients, tot_shadows, pixels);
@@ -222,4 +234,17 @@ uint8_t stegRecoverPixel(uint32_t shadow_pixel_idx, uint8_t* img) {
     recoveredPixel |= offset_img[j] & 1u;
   }
   return recoveredPixel;
+}
+
+void writeExtraData(BMP bmp, uint8_t* extra_data) {
+  ExtraData* extra_data_struct = (ExtraData*)extra_data;
+  extra_data_struct->width = bmpWidth(bmp);
+  extra_data_struct->height = bmpHeight(bmp);
+  extra_data_struct->bpp = bmpBpp(bmp);
+  extra_data_struct->n_colors = bmpNColors(bmp);
+  memcpy(&extra_data_struct->colors, bmpColors(bmp), bmpNColors(bmp) * sizeof(Color));
+}
+
+void readExtraData(uint8_t* extra_data_raw, ExtraData** extra_data) {
+  *extra_data = (ExtraData*)extra_data_raw;
 }
