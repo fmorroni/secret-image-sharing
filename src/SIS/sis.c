@@ -121,9 +121,6 @@ BMP sisRecover(uint8_t min_shadows, BMP shadows[min_shadows], uint16_t seed) {
   uint32_t shadow_size = ceilDiv(img_size, min_shadows);
   uint32_t img_idx = 0;
 
-  for (int i = 0; i < min_shadows; ++i) {
-  }
-
   uint32_t safe_shadow_size = (shadow_size < max_valid_shadow_idx) ? shadow_size : max_valid_shadow_idx;
 
   for (uint32_t k = 0; k < safe_shadow_size; ++k) {
