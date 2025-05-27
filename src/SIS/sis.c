@@ -98,7 +98,7 @@ BMP sisRecover(uint8_t min_shadows, BMP shadows[min_shadows], uint16_t seed) {
   // min_shadows value is used. That way you get a noise image in the output instead of an error.
   uint32_t max_valid_shadow_idx = UINT32_MAX;
   for (uint32_t i = 0; i < min_shadows; ++i) {
-    uint32_t shadow_size = bmpImageSize(shadows[i]) - 8;
+    uint32_t shadow_size = bmpImageSize(shadows[i]);
     uint32_t valid_k = shadow_size / 8;
     if (valid_k < max_valid_shadow_idx) {
       max_valid_shadow_idx = valid_k;
