@@ -87,16 +87,34 @@ void sisShadows(BMP bmp, uint8_t min_shadows, uint8_t tot_shadows, BMP carrier_b
 BMP sisRecover(uint8_t min_shadows, BMP shadows[min_shadows], uint16_t seed) {
   assert(min_shadows >= 2);
   uint32_t extra_data_size = bmpExtraSize(shadows[0]);
-  if (extra_data_size < 3 * sizeof(uint32_t)) {
-    fprintf(stderr, "Incorrect shadow format. Missing secret image info.\n");
-    exit(EXIT_FAILURE);
+  ExtraData* secret_info;
+  BMP secret;
+  if (extra_data_size == 0) {
+    fprintf(stderr, "Missing secret image info. Defaulting to: secret size = carrier size, bpp = 8 \n");
+    BMP bmp = shadows[0];
+    uint32_t extra_data_size = (4 * sizeof(uint32_t)) + (bmpNColors(bmp) * sizeof(Color));
+    uint8_t extra_data[extra_data_size];
+    writeExtraData(bmp, extra_data);
+    readExtraData(extra_data, &secret_info);
+    secret = bmpNew(
+      secret_info->width, secret_info->height, secret_info->bpp, NULL, secret_info->n_colors, secret_info->colors, 0,
+      NULL
+    );
+  } else {
+    readExtraData(bmpExtraData(shadows[0]), &secret_info);
+    secret = bmpNew(
+      secret_info->width, secret_info->height, secret_info->bpp, NULL, secret_info->n_colors, secret_info->colors, 0,
+      NULL
+    );
   }
+  if (!secret) exit(EXIT_FAILURE);
+
   uint16_t* reserved;
   uint16_t shadows_x[min_shadows];
-
   // This value is here to remove the possibility of a buffer overflow in case an incorrect
   // min_shadows value is used. That way you get a noise image in the output instead of an error.
   uint32_t max_valid_shadow_idx = UINT32_MAX;
+
   for (uint32_t i = 0; i < min_shadows; ++i) {
     uint32_t shadow_size = bmpImageSize(shadows[i]);
     uint32_t valid_k = shadow_size / 8;
@@ -109,18 +127,10 @@ BMP sisRecover(uint8_t min_shadows, BMP shadows[min_shadows], uint16_t seed) {
   }
   if (seed == 0) seed = reserved[0];
 
-  // uint8_t* secret_info = bmpExtraData(shadows[0]);
-  ExtraData* secret_info;
-  readExtraData(bmpExtraData(shadows[0]), &secret_info);
-  BMP secret = bmpNew(
-    secret_info->width, secret_info->height, secret_info->bpp, NULL, secret_info->n_colors, secret_info->colors, 0, NULL
-  );
-  if (!secret) exit(EXIT_FAILURE);
   uint8_t* img = bmpImage(secret);
   uint32_t img_size = bmpImageSize(secret);
   uint32_t shadow_size = ceilDiv(img_size, min_shadows);
   uint32_t img_idx = 0;
-
   uint32_t safe_shadow_size = (shadow_size < max_valid_shadow_idx) ? shadow_size : max_valid_shadow_idx;
 
   for (uint32_t k = 0; k < safe_shadow_size; ++k) {
@@ -225,7 +235,6 @@ void stegHidePixel(uint32_t shadow_pixel_idx, uint8_t* img, uint8_t hide_pixel) 
 uint8_t stegRecoverPixel(uint32_t shadow_pixel_idx, uint8_t* img) {
   uint8_t recoveredPixel = 0;
   uint8_t* offset_img = img + ((size_t)shadow_pixel_idx * 8);
-  // printf("offset: %u\n", shadow_pixel_idx * 8);
   for (int j = 0; j < 8; ++j) {
     recoveredPixel <<= 1u;
     recoveredPixel |= offset_img[j] & 1u;
