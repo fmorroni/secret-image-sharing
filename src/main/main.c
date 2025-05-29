@@ -1,4 +1,4 @@
-#include "../SIS/sis.h"
+#include "../sis/sis.h"
 #include "../bmp/bmp.h"
 #include "args.h"
 #include <limits.h>

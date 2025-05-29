@@ -145,6 +145,8 @@ BMP sisRecover(uint8_t min_shadows, BMP shadows[min_shadows], uint16_t seed) {
     }
     uint8_t coefs[min_shadows];
     solveSystem(min_shadows, min_shadows + 1, ec_system[0], coefs);
+
+    // TODO: memcpy?
     for (int i = 0; i < min_shadows && img_idx < img_size; ++i, ++img_idx) {
       img[img_idx] = coefs[i];
     }
