@@ -364,6 +364,16 @@ static bool parseInfoHeader(FILE* file, BMP bmp) {
       );
       bmp->image_size = should_be_size;
     }
+    uint32_t should_be_n_colors = 1u << bmp->bpp;
+    if (bmp->bpp <= 8 && bmp->n_colors != should_be_n_colors) {
+      fprintf(
+        stderr,
+        "Warning: bpp = %u but number of colors %u != %u. Asuming color table is correct and fixing number of colors "
+        "value.\n",
+        bmp->bpp, bmp->n_colors, should_be_n_colors
+      );
+      bmp->n_colors = should_be_n_colors;
+    }
     return true;
   }
 }
