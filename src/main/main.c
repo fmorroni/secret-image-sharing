@@ -19,13 +19,15 @@ int main(int argc, char* argv[]) {
     sisShadows(bmp, args->min_shadows, args->tot_shadows, args->dir_bmps, args->seed);
     for (int i = 0; i < args->tot_shadows; ++i) {
       char full_path[4096];
-      snprintf(full_path, 4096, "%s/shadow-%03d.bmp", args->directory, i);
+      snprintf(full_path, 4096, "%s/shadow-%03d.bmp", args->directory_out, i);
       printf("Saving `%s`...\n", full_path);
       bmpWriteFile(full_path, args->dir_bmps[i]);
     }
     bmpFree(bmp);
   } else {
+    // TODO: remove
     printf("min_shadows: %d, parsed_shadows: %d\n", args->min_shadows, args->_parsed_bmps);
+
     BMP secret = sisRecover(args->min_shadows, args->dir_bmps, args->seed);
     bmpWriteFile(args->secret_filename, secret);
     bmpFree(secret);

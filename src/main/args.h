@@ -12,6 +12,7 @@ typedef struct Args {
   uint8_t min_shadows;
   uint8_t tot_shadows;
   const char* directory;
+  const char* directory_out;
   char* _directory_allocated;
   uint8_t _parsed_bmps;
   BMP* dir_bmps;

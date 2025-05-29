@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 static void printHelp(const char* executable_name);
@@ -17,6 +18,7 @@ static uint16_t strToUInt16(const char* str, const char* var_name);
 static int countBmpFiles(const char* directory);
 static void collectBmpFiles(Args* args, int needed_count);
 static void printHeader(const char* secret_filename);
+static bool is_directory(const char* path);
 Args* initArgs();
 void parseOptions(Args* args, int argc, char* argv[]);
 
@@ -49,12 +51,18 @@ Args* argsParse(int argc, char* argv[]) {
     args->directory = args->_directory_allocated;
   }
 
+  if (args->directory_out == NULL) args->directory_out = args->directory;
+  else if (!is_directory(args->directory_out)) {
+    fprintf(stderr, "Error: '%s' is not a valid directory.\n", args->directory_out);
+    exit(EXIT_FAILURE);
+  }
+
   int bmps_in_dir = countBmpFiles(args->directory);
   if (args->tot_shadows == 0) args->tot_shadows = bmps_in_dir;
   else if (bmps_in_dir < args->tot_shadows) {
     fprintf(
-      stderr, "Error: Not enough carrier images. Want %u shadows but found only %u carrier images.\n", args->tot_shadows,
-      bmps_in_dir
+      stderr, "Error: Not enough carrier images. Want %u shadows but found only %u carrier images.\n",
+      args->tot_shadows, bmps_in_dir
     );
     exit(EXIT_FAILURE);
   }
@@ -86,6 +94,7 @@ Args* initArgs() {
   args->min_shadows = 0;
   args->tot_shadows = 0;
   args->directory = NULL;
+  args->directory_out = NULL;
   args->_directory_allocated = NULL;
   args->_parsed_bmps = 0;
   args->dir_bmps = NULL;
@@ -103,12 +112,13 @@ void parseOptions(Args* args, int argc, char* argv[]) {
     {"min-shadows", required_argument, NULL, 'k'},
     {"tot-shadows", required_argument, NULL, 'n'},
     {"dir", required_argument, NULL, 'D'},
+    {"dir-out", required_argument, NULL, 'O'},
     {"seed", required_argument, NULL, 'S'},
     {0, 0, 0, 0}
   };
 
   int opt;
-  while ((opt = getopt_long(argc, argv, "hpdrs:k:n:D:S:", long_options, NULL)) != -1) {
+  while ((opt = getopt_long(argc, argv, "hpdrs:k:n:D:O:S:", long_options, NULL)) != -1) {
     switch (opt) {
     case 'h':
       printHelp(argv[0]);
@@ -141,6 +151,9 @@ void parseOptions(Args* args, int argc, char* argv[]) {
       break;
     case 'D':
       args->directory = optarg;
+      break;
+    case 'O':
+      args->directory_out = optarg;
       break;
     case 'S':
       args->seed = strToUInt16(optarg, "--seed | -S");
@@ -225,8 +238,10 @@ static void printHelp(const char* executable_name) {
     " (2 ≤ NUM ≤ 255)\n"
   );
   printf("  -n, --tot-shadows NUM    Optional: Total number of shadow images to create (only if -d used)\n");
-  printf("  -D, --dir DIR            Optional: Directory to read/write shadow images\n");
+  printf("  -D, --dir DIR            Optional: Directory from which to read shadow images\n");
   printf("                             (default: current working directory)\n");
+  printf("  -O, --dir-out DIR        Optional: Directory to write shadow images to (only if -d used)\n");
+  printf("                             (default: the value provided to --dir)\n");
   printf("  -S, --seed NUM           Optional: Seed to use for permutation matrix.\n");
   printf("                             (default: 0 if -d used, `seed` from reserved bytes in shadow if -r used)\n");
 }
@@ -272,4 +287,12 @@ static void printHeader(const char* secret_filename) {
   }
   bmpPrintHeader(bmp);
   bmpFree(bmp);
+}
+
+static bool is_directory(const char* path) {
+  struct stat statbuf;
+  if (stat(path, &statbuf) != 0) {
+    return false;
+  }
+  return S_ISDIR(statbuf.st_mode);
 }
