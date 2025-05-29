@@ -111,10 +111,9 @@ BMP sisRecover(uint8_t min_shadows, BMP shadows[min_shadows], uint16_t seed) {
 
   uint16_t* reserved;
   uint16_t shadows_x[min_shadows];
-  // This value is here to remove the possibility of a buffer overflow in case an incorrect
-  // min_shadows value is used. That way you get a noise image in the output instead of an error.
+  // `max_valid_shadow_idx` is used to remove the possibility of a buffer overflow in case an incorrect
+  // `min_shadows` value is used. This way you get a noise image in the output instead of an error.
   uint32_t max_valid_shadow_idx = UINT32_MAX;
-
   for (uint32_t i = 0; i < min_shadows; ++i) {
     uint32_t shadow_size = bmpImageSize(shadows[i]);
     uint32_t valid_k = shadow_size / 8;
