@@ -17,10 +17,11 @@ static uint8_t strToUInt8(const char* str, const char* var_name);
 static uint16_t strToUInt16(const char* str, const char* var_name);
 static int countBmpFiles(const char* directory);
 static void collectBmpFiles(Args* args, int needed_count);
-static void printHeader(const char* secret_filename);
+static bool printHeader(const char* secret_filename);
 static bool is_directory(const char* path);
-Args* initArgs();
-void parseOptions(Args* args, int argc, char* argv[]);
+__attribute__((noreturn)) static void clean_exit(Args* args, int err);
+static Args* initArgs();
+static void parseOptions(Args* args, int argc, char* argv[]);
 
 Args* argsParse(int argc, char* argv[]) {
   Args* args = initArgs();
@@ -29,24 +30,24 @@ Args* argsParse(int argc, char* argv[]) {
   if (!args->secret_filename) {
     fprintf(stderr, "Error: secret filename/path is required.\n");
     fprintf(stderr, "Try '%s --help' for usage.\n", argv[0]);
-    exit(EXIT_FAILURE);
+    clean_exit(args, EXIT_FAILURE);
   }
 
   if (!args->distribute && !args->recover) {
     fprintf(stderr, "Error: one of --distribute or --recover must be specified.\n");
-    exit(EXIT_FAILURE);
+    clean_exit(args, EXIT_FAILURE);
   }
 
   if (args->min_shadows < 2) {
     fprintf(stderr, "Error: --min-shadows must be specified and be greater than 2.\n");
-    exit(EXIT_FAILURE);
+    clean_exit(args, EXIT_FAILURE);
   }
 
   if (args->directory == NULL) {
     args->_directory_allocated = get_current_dir_name();
     if (args->_directory_allocated == NULL) {
       perror("getcwd");
-      exit(EXIT_FAILURE);
+      clean_exit(args, EXIT_FAILURE);
     }
     args->directory = args->_directory_allocated;
   }
@@ -54,7 +55,7 @@ Args* argsParse(int argc, char* argv[]) {
   if (args->directory_out == NULL) args->directory_out = args->directory;
   else if (!is_directory(args->directory_out)) {
     fprintf(stderr, "Error: '%s' is not a valid directory.\n", args->directory_out);
-    exit(EXIT_FAILURE);
+    clean_exit(args, EXIT_FAILURE);
   }
 
   int bmps_in_dir = countBmpFiles(args->directory);
@@ -64,12 +65,12 @@ Args* argsParse(int argc, char* argv[]) {
       stderr, "Error: Not enough carrier images. Want %u shadows but found only %u carrier images.\n",
       args->tot_shadows, bmps_in_dir
     );
-    exit(EXIT_FAILURE);
+    clean_exit(args, EXIT_FAILURE);
   }
 
   if (args->tot_shadows < args->min_shadows) {
     fprintf(stderr, "Error: Not enough shadows (k: %u, n: %u) .\n", args->min_shadows, args->tot_shadows);
-    exit(EXIT_FAILURE);
+    clean_exit(args, EXIT_FAILURE);
   }
 
   uint8_t to_parse;
@@ -82,7 +83,7 @@ Args* argsParse(int argc, char* argv[]) {
   return args;
 }
 
-Args* initArgs() {
+static Args* initArgs() {
   Args* args = malloc(sizeof(Args));
   if (!args) {
     perror("malloc");
@@ -102,7 +103,7 @@ Args* initArgs() {
   return args;
 }
 
-void parseOptions(Args* args, int argc, char* argv[]) {
+static void parseOptions(Args* args, int argc, char* argv[]) {
   const struct option long_options[] = {
     {"help", no_argument, NULL, 'h'},
     {"print-header", no_argument, NULL, 'p'},
@@ -122,21 +123,21 @@ void parseOptions(Args* args, int argc, char* argv[]) {
     switch (opt) {
     case 'h':
       printHelp(argv[0]);
-      exit(EXIT_SUCCESS);
+      clean_exit(args, EXIT_SUCCESS);
     case 'p':
-      printHeader(args->secret_filename);
-      exit(EXIT_SUCCESS);
+      if (!printHeader(args->secret_filename)) clean_exit(args, EXIT_FAILURE);
+      else clean_exit(args, EXIT_SUCCESS);
     case 'd':
       if (args->recover) {
         fprintf(stderr, "Error: --distribute and --recover are mutually exclusive.\n");
-        exit(EXIT_FAILURE);
+        clean_exit(args, EXIT_FAILURE);
       }
       args->distribute = true;
       break;
     case 'r':
       if (args->distribute) {
         fprintf(stderr, "Error: --distribute and --recover are mutually exclusive.\n");
-        exit(EXIT_FAILURE);
+        clean_exit(args, EXIT_FAILURE);
       }
       args->recover = true;
       break;
@@ -144,10 +145,14 @@ void parseOptions(Args* args, int argc, char* argv[]) {
       args->secret_filename = optarg;
       break;
     case 'k':
+      errno = 0;
       args->min_shadows = strToUInt8(optarg, "--min-shadows | -k");
+      if (errno != 0) clean_exit(args, EXIT_FAILURE);
       break;
     case 'n':
+      errno = 0;
       if (args->distribute) args->tot_shadows = strToUInt8(optarg, "--tot-shadows | -n");
+      if (errno != 0) clean_exit(args, EXIT_FAILURE);
       break;
     case 'D':
       args->directory = optarg;
@@ -156,11 +161,13 @@ void parseOptions(Args* args, int argc, char* argv[]) {
       args->directory_out = optarg;
       break;
     case 'S':
+      errno = 0;
       args->seed = strToUInt16(optarg, "--seed | -S");
+      if (errno != 0) clean_exit(args, EXIT_FAILURE);
       break;
     default:
       fprintf(stderr, "Try '%s --help' for usage.\n", argv[0]);
-      exit(EXIT_FAILURE);
+      clean_exit(args, EXIT_FAILURE);
     }
   }
 }
@@ -196,8 +203,7 @@ static void collectBmpFiles(Args* args, int needed_count) {
   DIR* dir = opendir(args->directory);
   if (dir == NULL) {
     perror("opendir");
-    argsFree(args);
-    exit(EXIT_FAILURE);
+    clean_exit(args, EXIT_FAILURE);
   }
 
   struct dirent* entry;
@@ -213,8 +219,7 @@ static void collectBmpFiles(Args* args, int needed_count) {
       args->dir_bmps[count] = bmpParse(full_path);
       if (args->dir_bmps[count] == NULL) {
         fprintf(stderr, "Error parsing bmp `%s`\n", full_path);
-        argsFree(args);
-        exit(EXIT_FAILURE);
+        clean_exit(args, EXIT_FAILURE);
       }
       args->_parsed_bmps = ++count;
     }
@@ -253,15 +258,17 @@ static uint32_t strToNumInRange(const char* str, uint32_t min, uint32_t max, con
 
   if (errno != 0) {
     perror("strtoul");
-    exit(errno);
+    return 0;
   }
   if (*endptr != 0) {
     fprintf(stderr, "Invalid character '%c' in `%s`: %s\n", *endptr, var_name, str);
-    exit(EXIT_FAILURE);
+    errno = EINVAL;
+    return 0;
   }
   if (val < min || val > max) {
     fprintf(stderr, "Value out of range [%u, %u] for `%s`: %li\n", min, max, var_name, val);
-    exit(EXIT_FAILURE);
+    errno = EINVAL;
+    return 0;
   }
 
   return val;
@@ -275,18 +282,19 @@ static uint16_t strToUInt16(const char* str, const char* var_name) {
   return (uint16_t)strToNumInRange(str, 0, UINT16_MAX, var_name);
 }
 
-static void printHeader(const char* secret_filename) {
+static bool printHeader(const char* secret_filename) {
   if (secret_filename == NULL) {
     fprintf(stderr, "Error: pass <-s FILE> before -p \n");
-    exit(EXIT_FAILURE);
+    return false;
   }
   BMP bmp = bmpParse(secret_filename);
   if (bmp == NULL) {
     fprintf(stderr, "Error parsing bmp\n");
-    exit(EXIT_FAILURE);
+    return false;
   }
   bmpPrintHeader(bmp);
   bmpFree(bmp);
+  return true;
 }
 
 static bool is_directory(const char* path) {
@@ -295,4 +303,9 @@ static bool is_directory(const char* path) {
     return false;
   }
   return S_ISDIR(statbuf.st_mode);
+}
+
+static void clean_exit(Args* args, int err) {
+  argsFree(args);
+  exit(err);
 }
