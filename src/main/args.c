@@ -13,7 +13,7 @@
 #include <unistd.h>
 
 static void printHelp(const char* executable_name);
-static uint8_t strToUInt8(const char* str, const char* var_name);
+static uint8_t strToKRange(const char* str, const char* var_name);
 static uint16_t strToUInt16(const char* str, const char* var_name);
 static int countBmpFiles(const char* directory);
 static void collectBmpFiles(Args* args, int needed_count);
@@ -38,8 +38,8 @@ Args* argsParse(int argc, char* argv[]) {
     clean_exit(args, EXIT_FAILURE);
   }
 
-  if (args->min_shadows < 2) {
-    fprintf(stderr, "Error: --min-shadows must be specified and be greater than 2.\n");
+  if (args->min_shadows == 0) {
+    fprintf(stderr, "Error: --min-shadows must be specified.\n");
     clean_exit(args, EXIT_FAILURE);
   }
 
@@ -146,12 +146,12 @@ static void parseOptions(Args* args, int argc, char* argv[]) {
       break;
     case 'k':
       errno = 0;
-      args->min_shadows = strToUInt8(optarg, "--min-shadows | -k");
+      args->min_shadows = strToKRange(optarg, "--min-shadows | -k");
       if (errno != 0) clean_exit(args, EXIT_FAILURE);
       break;
     case 'n':
       errno = 0;
-      if (args->distribute) args->tot_shadows = strToUInt8(optarg, "--tot-shadows | -n");
+      if (args->distribute) args->tot_shadows = strToKRange(optarg, "--tot-shadows | -n");
       if (errno != 0) clean_exit(args, EXIT_FAILURE);
       break;
     case 'D':
@@ -274,8 +274,8 @@ static uint32_t strToNumInRange(const char* str, uint32_t min, uint32_t max, con
   return val;
 }
 
-static uint8_t strToUInt8(const char* str, const char* var_name) {
-  return (uint8_t)strToNumInRange(str, 0, UINT8_MAX, var_name);
+static uint8_t strToKRange(const char* str, const char* var_name) {
+  return (uint8_t)strToNumInRange(str, 2, UINT8_MAX, var_name);
 }
 
 static uint16_t strToUInt16(const char* str, const char* var_name) {
