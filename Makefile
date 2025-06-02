@@ -2,7 +2,6 @@ CC := gcc
 CFLAGS := -Wall --pedantic -fsanitize=address -Wextra -std=c11 -O2 -I. -Isrc
 debug: CFLAGS := -Wall --pedantic -fsanitize=address -Wextra -std=c11 -g -O0 -I. -Isrc
 
-
 SRC_DIR := src
 OBJ_DIR = build
 
