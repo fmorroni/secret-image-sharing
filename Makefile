@@ -3,13 +3,14 @@ CFLAGS := -Wall --pedantic -fsanitize=address -Wextra -std=c11 -O2 -I. -Isrc
 debug: CFLAGS := -Wall --pedantic -fsanitize=address -Wextra -std=c11 -g -O0 -I. -Isrc
 
 SRC_DIR := src
-OBJ_DIR = build
+OBJ_DIR := build
+BIN_DIR := bin
 
 SRCS = $(shell find $(SRC_DIR) -name "*.c" ! -path "$(SRC_DIR)/test/*")
 HDRS = $(shell find $(SRC_DIR) -name "*.h" ! -path "$(SRC_DIR)/test/*")
 OBJS = $(SRCS:%.c=$(OBJ_DIR)/%.o)
 
-TARGET := bin/app
+TARGET := $(BIN_DIR)/app
 
 CLANG_TIDY = clang-tidy
 CLANG_TIDY_OPTS = --quiet
@@ -29,7 +30,7 @@ $(OBJ_DIR)/%.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -rf $(OBJ_DIR) $(TARGET)
+	rm -rf $(OBJ_DIR) $(BIN_DIR)
 
 lint:
 	@echo "Running clang-tidy on source files..."
